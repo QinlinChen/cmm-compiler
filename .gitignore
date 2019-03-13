@@ -1,2 +1,5 @@
 parser
 *.yy.c
+*.tab.[ch]
+*.o
+*.output
