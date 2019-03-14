@@ -32,70 +32,174 @@ void yyerror(char* msg);
 %%
 
 /* High-level Definitions */
-Program: ExtDefList
+Program: ExtDefList {
+        $$ = create_nontermnode("Program", @$.first_line);
+        add_child($$, $1);
+        print_tree($$);
+    }
     ;
-ExtDefList: ExtDef ExtDefList
-    | /* empty */
+ExtDefList: ExtDef ExtDefList {
+        $$ = create_nontermnode("ExtDefList", @$.first_line);
+        add_child2($$, $1, $2);
+    }
+    | /* empty */ { $$ = NULL; }
     ;
-ExtDef: Specifier ExtDecList SEMI
-    | Specifier SEMI
-    | Specifier FunDec CompSt
+ExtDef: Specifier ExtDecList SEMI {
+        $$ = create_nontermnode("ExtDef", @$.first_line);
+        add_child3($$, $1, $2, $3);
+    }
+    | Specifier SEMI {
+        $$ = create_nontermnode("ExtDef", @$.first_line);
+        add_child2($$, $1, $2);
+    }
+    | Specifier FunDec CompSt {
+        $$ = create_nontermnode("ExtDef", @$.first_line);
+        add_child3($$, $1, $2, $3);
+    }
     ;
-ExtDecList: VarDec
-    | VarDec COMMA ExtDecList
+ExtDecList: VarDec {
+        $$ = create_nontermnode("ExtDecList", @$.first_line);
+        add_child($$, $1);
+    }
+    | VarDec COMMA ExtDecList {
+        $$ = create_nontermnode("ExtDecList", @$.first_line);
+        add_child3($$, $1, $2, $3);
+    }
     ;
 
 /* Specifiers */
-Specifier: TYPE
-    | StructSpecifier
+Specifier: TYPE {
+        $$ = create_nontermnode("Specifier", @$.first_line);
+        add_child($$, $1);
+    }
+    | StructSpecifier {
+        $$ = create_nontermnode("Specifier", @$.first_line);
+        add_child($$, $1);
+    }
     ;
-StructSpecifier: STRUCT OptTag LC DefList RC
-    | STRUCT Tag
+StructSpecifier: STRUCT OptTag LC DefList RC {
+        $$ = create_nontermnode("StructSpecifier", @$.first_line);
+        add_child5($$, $1, $2, $3, $4, $5);
+    }
+    | STRUCT Tag {
+        $$ = create_nontermnode("StructSpecifier", @$.first_line);
+        add_child2($$, $1, $2);
+    }
     ;
-OptTag: ID
-    | /* empty */
+OptTag: ID {
+        $$ = create_nontermnode("OptTag", @$.first_line);
+        add_child($$, $1);
+    }
+    | /* empty */ { $$ = NULL; }
     ;
-Tag: ID
+Tag: ID {
+        $$ = create_nontermnode("Tag", @$.first_line);
+        add_child($$, $1);
+    }
     ;
 
 /* Declarators */
-VarDec: ID
-    | VarDec LB INT RB
+VarDec: ID {
+        $$ = create_nontermnode("VarDec", @$.first_line);
+        add_child($$, $1);
+    }
+    | VarDec LB INT RB { 
+        $$ = create_nontermnode("VarDec", @$.first_line);
+        add_child4($$, $1, $2, $3, $4);
+    }
     ;
-FunDec: ID LP VarList RP
-    | ID LP RP
+FunDec: ID LP VarList RP { 
+        $$ = create_nontermnode("FunDec", @$.first_line);
+        add_child4($$, $1, $2, $3, $4);
+    }
+    | ID LP RP { 
+        $$ = create_nontermnode("FunDec", @$.first_line);
+        add_child3($$, $1, $2, $3);
+    }
     ;
-VarList: ParamDec COMMA VarList
-    | ParamDec
+VarList: ParamDec COMMA VarList { 
+        $$ = create_nontermnode("VarList", @$.first_line);
+        add_child3($$, $1, $2, $3);
+    }
+    | ParamDec { 
+        $$ = create_nontermnode("VarList", @$.first_line);
+        add_child($$, $1);
+    }
     ;
-ParamDec: Specifier VarDec
+ParamDec: Specifier VarDec { 
+        $$ = create_nontermnode("ParamDec", @$.first_line);
+        add_child2($$, $1, $2);
+    }
     ;
 
 /* Statements */
-CompSt: LC DefList StmtList RC
+CompSt: LC DefList StmtList RC { 
+        $$ = create_nontermnode("CompSt", @$.first_line);
+        add_child4($$, $1, $2, $3, $4);
+    }
     ;
-StmtList: Stmt StmtList
-    | /* empty */
+StmtList: Stmt StmtList { 
+        $$ = create_nontermnode("StmtList", @$.first_line);
+        add_child2($$, $1, $2);
+    }
+    | /* empty */ { $$ = NULL; }
     ;
-Stmt: Exp SEMI  { print_tree($1); }
-    | CompSt
-    | RETURN Exp SEMI
-    | IF LP Exp RP Stmt %prec LOWER_THAN_ELSE
-    | IF LP Exp RP Stmt ELSE Stmt
-    | WHILE LP Exp RP Stmt
+Stmt: Exp SEMI  { 
+        $$ = create_nontermnode("Stmt", @$.first_line);
+        add_child2($$, $1, $2);
+    }
+    | CompSt {
+        $$ = create_nontermnode("Stmt", @$.first_line);
+        add_child($$, $1);
+    }
+    | RETURN Exp SEMI {
+        $$ = create_nontermnode("Stmt", @$.first_line);
+        add_child3($$, $1, $2, $3);
+    }
+    | IF LP Exp RP Stmt %prec LOWER_THAN_ELSE {
+        $$ = create_nontermnode("Stmt", @$.first_line);
+        add_child5($$, $1, $2, $3, $4, $5);
+    }
+    | IF LP Exp RP Stmt ELSE Stmt {
+        $$ = create_nontermnode("Stmt", @$.first_line);
+        treenode_t *children[] = { $1, $2, $3, $4, $5, $6, $7};
+        add_children($$, children, 7);
+    }
+    | WHILE LP Exp RP Stmt {
+        $$ = create_nontermnode("Stmt", @$.first_line);
+        add_child5($$, $1, $2, $3, $4, $5);
+    }
     ;
 
 /* Local Definitions */
-DefList: Def DefList
-    | /* empty */
+DefList: Def DefList {
+        $$ = create_nontermnode("DefList", @$.first_line);
+        add_child2($$, $1, $2);
+    }
+    | /* empty */ { $$ = NULL; }
     ;
-Def: Specifier DecList SEMI
+Def: Specifier DecList SEMI {
+        $$ = create_nontermnode("Def", @$.first_line);
+        add_child3($$, $1, $2, $3);
+    }
     ;
-DecList: Dec
-    | Dec COMMA DecList
+DecList: Dec {
+        $$ = create_nontermnode("DecList", @$.first_line);
+        add_child($$, $1);
+    }
+    | Dec COMMA DecList {
+        $$ = create_nontermnode("DecList", @$.first_line);
+        add_child3($$, $1, $2, $3);
+    }
     ;
-Dec: VarDec
-    | VarDec ASSIGNOP Exp
+Dec: VarDec {
+        $$ = create_nontermnode("Dec", @$.first_line);
+        add_child($$, $1);
+    }
+    | VarDec ASSIGNOP Exp {
+        $$ = create_nontermnode("Dec", @$.first_line);
+        add_child3($$, $1, $2, $3);
+    }
     ;
 
 /* Expressions */
@@ -159,9 +263,18 @@ Exp: Exp ASSIGNOP Exp {
         $$ = create_nontermnode("Exp", @$.first_line);
         add_child3($$, $1, $2, $3);
     }
-    | ID
-    | INT
-    | FLOAT
+    | ID {
+        $$ = create_nontermnode("Exp", @$.first_line);
+        add_child($$, $1);
+    }
+    | INT {
+        $$ = create_nontermnode("Exp", @$.first_line);
+        add_child($$, $1);
+    }
+    | FLOAT {
+        $$ = create_nontermnode("Exp", @$.first_line);
+        add_child($$, $1);
+    }
     ;
 Args: Exp COMMA Args {
         $$ = create_nontermnode("Args", @$.first_line);
