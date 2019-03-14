@@ -2,6 +2,8 @@
 
 %{
 #include "syntax.tab.h"
+#include "syntaxtree.h"
+
 #include <assert.h>
 #include <stdio.h>
 
@@ -15,11 +17,14 @@ int yycolumn = 1;
 
 void handle_line_comment();
 void handle_block_comment();
-
+void handle_decinteger();
+void handle_octinteger();
+void handle_hexinteger();
+void handle_float();
+void handle_undefined_char();
 %}
 
 ws              [ \t]+
-
 digit           [0-9]
 nonzerodigit    [1-9]
 octdigit        [0-7]
@@ -43,42 +48,42 @@ exponentfloat   {pointfloat}[eE]("+"|"-")?{digit}+
 "\n" { yycolumn = 1; }
 "//" { handle_line_comment(); }
 "/*" { handle_block_comment(); }
-"struct" { return STRUCT; }
-"return" { return RETURN; }
-"if" { return IF; }
-"else" { return ELSE; }
-"while" { return WHILE; }
-"int" { return TYPE; }
-"float" { return TYPE; }
-";" { return SEMI; }
-"," { return COMMA; }
-"=" { return ASSIGNOP; }
-"==" { return RELOP; }
-">=" { return RELOP; }
-"<=" { return RELOP; }
-"!=" { return RELOP; }
-">" { return RELOP; }
-"<" { return RELOP; }
-"+" { return PLUS; }
-"-" { return MINUS; }
-"*" { return STAR; }
-"/" { return DIV; }
-"&&" { return AND; }
-"||" { return OR; }
-"." { return DOT; }
-"!" { return NOT; }
-"(" { return LP; }
-")" { return RP; }
-"[" { return LB; }
-"]" { return RB; }
-"{" { return LC; }
-"}" { return RC; }
-{id} { printf("ID (%s)\n", yytext); return ID; }
-{decinteger} { int d; sscanf(yytext, "%d", &d); printf("decINT (%d)\n", d); return INT; }
-{octinteger} { int o; sscanf(yytext, "%o", &o); printf("octINT (%d)\n", o); return INT; }
-{hexinteger} { int x; sscanf(yytext, "%x", &x); printf("hexINT (%d)\n", x); return INT; }
-{float} { float f; sscanf(yytext, "%f", &f); printf("FLOAT (%f)\n", f); return FLOAT; }
-. { printf("Error type A at Line %d: Mysterious characters \'%s\'\n", yylineno, yytext); }
+"struct" { yylval = create_termnode("STRUCT", yylineno, STRUCT); return STRUCT; }
+"return" { yylval = create_termnode("return", yylineno, RETURN); return RETURN; }
+"if"     { yylval = create_termnode("IF", yylineno, IF); return IF; }
+"else"   { yylval = create_termnode("ELSE", yylineno, ELSE); return ELSE; }
+"while"  { yylval = create_termnode("WHILE", yylineno, WHILE); return WHILE; }
+"int"    { yylval = create_typenode(yylineno, "int"); return TYPE; }
+"float"  { yylval = create_typenode(yylineno, "float"); return TYPE; }
+";"  { yylval = create_termnode("SEMI", yylineno, SEMI); return SEMI; }
+","  { yylval = create_termnode("COMMA", yylineno, COMMA); return COMMA; }
+"="  { yylval = create_termnode("ASSIGNOP", yylineno, ASSIGNOP); return ASSIGNOP; }
+"==" { yylval = create_termnode("RELOP", yylineno, RELOP); return RELOP; }
+">=" { yylval = create_termnode("RELOP", yylineno, RELOP); return RELOP; }
+"<=" { yylval = create_termnode("RELOP", yylineno, RELOP); return RELOP; }
+"!=" { yylval = create_termnode("RELOP", yylineno, RELOP); return RELOP; }
+">"  { yylval = create_termnode("RELOP", yylineno, RELOP); return RELOP; }
+"<"  { yylval = create_termnode("RELOP", yylineno, RELOP); return RELOP; }
+"+"  { yylval = create_termnode("PLUS", yylineno, PLUS); return PLUS; }
+"-"  { yylval = create_termnode("MINUS", yylineno, MINUS); return MINUS; }
+"*"  { yylval = create_termnode("STAR", yylineno, STAR); return STAR; }
+"/"  { yylval = create_termnode("DIV", yylineno, DIV); return DIV; }
+"&&" { yylval = create_termnode("AND", yylineno, AND); return AND; }
+"||" { yylval = create_termnode("OR", yylineno, OR); return OR; }
+"."  { yylval = create_termnode("DOT", yylineno, DOT); return DOT; }
+"!"  { yylval = create_termnode("NOT", yylineno, NOT); return NOT; }
+"("  { yylval = create_termnode("LP", yylineno, LP); return LP; }
+")"  { yylval = create_termnode("RP", yylineno, RP); return RP; }
+"["  { yylval = create_termnode("LB", yylineno, LB); return LB; }
+"]"  { yylval = create_termnode("RB", yylineno, RB); return RB; }
+"{"  { yylval = create_termnode("LC", yylineno, LC); return LC; }
+"}"  { yylval = create_termnode("RC", yylineno, RC); return RC; }
+{id}         { yylval = create_idnode(yylineno, yytext); return ID; }
+{decinteger} { handle_decinteger(); return INT; }
+{octinteger} { handle_octinteger(); return INT; }
+{hexinteger} { handle_hexinteger(); return INT; }
+{float}      { handle_float(); return FLOAT; }
+. { handle_undefined_char(); }
 
 %%
 
@@ -115,4 +120,38 @@ void handle_block_comment()
         }
     }
     printf("Error type A at Line %d: No matched \'*/\'", yylineno);
+}
+
+void handle_decinteger()
+{
+    int d;
+    sscanf(yytext, "%d", &d);
+    yylval = create_intnode(yylineno, d);
+}
+
+void handle_octinteger()
+{
+    int o;
+    sscanf(yytext, "%o", &o);
+    yylval = create_intnode(yylineno, o);
+}
+
+void handle_hexinteger()
+{
+    int x;
+    sscanf(yytext, "%x", &x);
+    yylval = create_intnode(yylineno, x);
+}
+
+void handle_float()
+{
+    float f;
+    sscanf(yytext, "%f", &f);
+    yylval = create_floatnode(yylineno, f);
+}
+
+void handle_undefined_char()
+{
+    printf("Error type A at Line %d: Mysterious characters \'%s\'\n",
+           yylineno, yytext);
 }

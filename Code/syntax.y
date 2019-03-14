@@ -1,5 +1,6 @@
 %{
-#define YYSTYPE float
+#include "syntaxtree.h"
+#define YYSTYPE treenode_t *
 
 #include "lex.yy.c"
 
@@ -33,8 +34,8 @@ void yyerror(char* msg);
 /* High-level Definitions */
 Program: ExtDefList
     ;
-ExtDefList: /* empty */
-    | ExtDef ExtDefList
+ExtDefList: ExtDef ExtDefList
+    | /* empty */
     ;
 ExtDef: Specifier ExtDecList SEMI
     | Specifier SEMI
@@ -51,8 +52,8 @@ Specifier: TYPE
 StructSpecifier: STRUCT OptTag LC DefList RC
     | STRUCT Tag
     ;
-OptTag: /* empty */
-    | ID
+OptTag: ID
+    | /* empty */
     ;
 Tag: ID
     ;
@@ -73,8 +74,8 @@ ParamDec: Specifier VarDec
 /* Statements */
 CompSt: LC DefList StmtList RC
     ;
-StmtList: /* empty */ 
-    | Stmt StmtList
+StmtList: Stmt StmtList
+    | /* empty */
     ;
 Stmt: Exp SEMI
     | CompSt
