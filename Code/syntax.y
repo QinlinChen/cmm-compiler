@@ -1,9 +1,18 @@
 %{
 #include "syntaxtree.h"
+
+#define YYERROR_VERBOSE 1
 #define YYSTYPE treenode_t *
 
 int has_error = 0;
-void yyerror(char* msg);
+
+#define yyerror(msg) \
+    do {\
+        has_error = 1; \
+        fprintf(stderr, "Error type B at Line %d: %s\n", yylineno, msg); \
+        fflush(stderr); \
+    } while (0)
+
 
 #include "lex.yy.c"
 %}
@@ -171,6 +180,7 @@ Stmt: Exp SEMI  {
         $$ = create_nontermnode("Stmt", @$.first_line);
         add_child5($$, $1, $2, $3, $4, $5);
     }
+    | error SEMI { printf("Stat: \';\'\n"); }
     ;
 
 /* Local Definitions */
@@ -289,8 +299,3 @@ Args: Exp COMMA Args {
     ;
 
 %%
-
-void yyerror(char* msg)
-{
-    fprintf(stderr, "error: %s\n", msg);
-}

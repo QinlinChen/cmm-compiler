@@ -5,9 +5,5 @@ struct A {
 
 int main(int argc, int argv)
 {
-    if (a > b > c)
-        if (1)
-            return a;
-        else
-            return d;
+    1+ 2
 }

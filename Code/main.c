@@ -1,5 +1,8 @@
-#include "syntax.tab.h"
 #include <stdio.h>
+
+void yyrestart(FILE *);
+int yyparse(void);
+extern int yydebug;
 
 int main(int argc, char **argv)
 {
@@ -12,6 +15,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    yydebug = 1;
     yyrestart(f);
     yyparse();
     return 0;
