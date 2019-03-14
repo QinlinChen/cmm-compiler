@@ -1,4 +1,13 @@
-int main()
+int i, j;
+struct A {
+    int i = 0, j =0;
+};
+
+int main(int argc, int argv)
 {
-    i = 1 + 2 + 3;
+    if (a > b > c)
+        if (1)
+            return a;
+        else
+            return d;
 }

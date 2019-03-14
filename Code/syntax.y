@@ -2,9 +2,10 @@
 #include "syntaxtree.h"
 #define YYSTYPE treenode_t *
 
-#include "lex.yy.c"
-
+int has_error = 0;
 void yyerror(char* msg);
+
+#include "lex.yy.c"
 %}
 
 %token INT FLOAT
@@ -35,7 +36,8 @@ void yyerror(char* msg);
 Program: ExtDefList {
         $$ = create_nontermnode("Program", @$.first_line);
         add_child($$, $1);
-        print_tree($$);
+        if (!has_error)
+            print_tree($$);
     }
     ;
 ExtDefList: ExtDef ExtDefList {
