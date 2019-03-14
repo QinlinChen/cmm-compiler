@@ -49,7 +49,7 @@ exponentfloat   {pointfloat}[eE]("+"|"-")?{digit}+
 "//" { handle_line_comment(); }
 "/*" { handle_block_comment(); }
 "struct" { yylval = create_termnode("STRUCT", yylineno, STRUCT); return STRUCT; }
-"return" { yylval = create_termnode("return", yylineno, RETURN); return RETURN; }
+"return" { yylval = create_termnode("RETURN", yylineno, RETURN); return RETURN; }
 "if"     { yylval = create_termnode("IF", yylineno, IF); return IF; }
 "else"   { yylval = create_termnode("ELSE", yylineno, ELSE); return ELSE; }
 "while"  { yylval = create_termnode("WHILE", yylineno, WHILE); return WHILE; }
@@ -110,12 +110,12 @@ void handle_block_comment()
             break;
         case 1:
             if (c == '/')
-                return;     // match successfuly
+                return;     // Match successfuly.
             else
                 status = 0;
             break;
         default:
-            assert(0);      // Should not reach here
+            assert(0);      // Should not reach here.
             break;
         }
     }

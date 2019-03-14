@@ -77,7 +77,7 @@ CompSt: LC DefList StmtList RC
 StmtList: Stmt StmtList
     | /* empty */
     ;
-Stmt: Exp SEMI
+Stmt: Exp SEMI  { print_tree($1); }
     | CompSt
     | RETURN Exp SEMI
     | IF LP Exp RP Stmt %prec LOWER_THAN_ELSE
@@ -99,27 +99,78 @@ Dec: VarDec
     ;
 
 /* Expressions */
-Exp: Exp ASSIGNOP Exp
-    | Exp AND Exp
-    | Exp OR Exp
-    | Exp RELOP Exp
-    | Exp PLUS Exp
-    | Exp MINUS Exp
-    | Exp STAR Exp
-    | Exp DIV Exp
-    | LP Exp RP
-    | MINUS Exp %prec UMINUS
-    | NOT Exp
-    | ID LP Args RP
-    | ID LP RP
-    | Exp LB Exp RB
-    | Exp DOT ID
-    | ID    { @$.first_line; }
+Exp: Exp ASSIGNOP Exp {
+        $$ = create_nontermnode("Exp", @$.first_line);
+        add_child3($$, $1, $2, $3);
+    }
+    | Exp AND Exp {
+        $$ = create_nontermnode("Exp", @$.first_line);
+        add_child3($$, $1, $2, $3);
+    }
+    | Exp OR Exp {
+        $$ = create_nontermnode("Exp", @$.first_line);
+        add_child3($$, $1, $2, $3);
+    }
+    | Exp RELOP Exp {
+        $$ = create_nontermnode("Exp", @$.first_line);
+        add_child3($$, $1, $2, $3);
+    }
+    | Exp PLUS Exp {
+        $$ = create_nontermnode("Exp", @$.first_line);
+        add_child3($$, $1, $2, $3);
+    }
+    | Exp MINUS Exp {
+        $$ = create_nontermnode("Exp", @$.first_line);
+        add_child3($$, $1, $2, $3);
+    }
+    | Exp STAR Exp {
+        $$ = create_nontermnode("Exp", @$.first_line);
+        add_child3($$, $1, $2, $3);
+    }
+    | Exp DIV Exp {
+        $$ = create_nontermnode("Exp", @$.first_line);
+        add_child3($$, $1, $2, $3);
+    }
+    | LP Exp RP {
+        $$ = create_nontermnode("Exp", @$.first_line);
+        add_child3($$, $1, $2, $3);
+    }
+    | MINUS Exp %prec UMINUS {
+        $$ = create_nontermnode("Exp", @$.first_line);
+        add_child2($$, $1, $2);
+    }
+    | NOT Exp {
+        $$ = create_nontermnode("Exp", @$.first_line);
+        add_child2($$, $1, $2);
+    }
+    | ID LP Args RP {
+        $$ = create_nontermnode("Exp", @$.first_line);
+        add_child4($$, $1, $2, $3, $4);
+    }
+    | ID LP RP {
+        $$ = create_nontermnode("Exp", @$.first_line);
+        add_child3($$, $1, $2, $3);
+    }
+    | Exp LB Exp RB {
+        $$ = create_nontermnode("Exp", @$.first_line);
+        add_child4($$, $1, $2, $3, $4);
+    }
+    | Exp DOT ID {
+        $$ = create_nontermnode("Exp", @$.first_line);
+        add_child3($$, $1, $2, $3);
+    }
+    | ID
     | INT
     | FLOAT
     ;
-Args: Exp COMMA Args
-    | Exp
+Args: Exp COMMA Args {
+        $$ = create_nontermnode("Args", @$.first_line);
+        add_child3($$, $1, $2, $3);
+    }
+    | Exp {
+        $$ = create_nontermnode("Args", @$.first_line);
+        add_child($$, $1);
+    }
     ;
 
 %%
