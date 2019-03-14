@@ -93,7 +93,7 @@ void add_children(treenode_t *parent, treenode_t *children[], int nchild)
     treenode_t *cur = children[0];    
     for (int i = 1; i < nchild; ++i) {
         if (!children[i])
-            break;
+            continue;
         cur->next = children[i];
         cur = children[i];
     }
