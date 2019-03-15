@@ -22,7 +22,7 @@ treenode_t *create_nontermnode(const char *name, int lineno);
 treenode_t *create_termnode(const char *name, int lineno, int token);
 treenode_t *create_idnode(int lineno, const char *id);
 treenode_t *create_intnode(int lineno, int ival);
-treenode_t *create_floatnode(int lineno, int fval);
+treenode_t *create_floatnode(int lineno, float fval);
 treenode_t *create_typenode(int lineno, const char *type);
 void destroy_treenode(treenode_t *node);
 

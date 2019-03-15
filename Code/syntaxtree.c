@@ -49,7 +49,7 @@ treenode_t *create_intnode(int lineno, int ival)
     return newnode;
 }
 
-treenode_t *create_floatnode(int lineno, int fval)
+treenode_t *create_floatnode(int lineno, float fval)
 {
     treenode_t *newnode = create_termnode("FLOAT", lineno, FLOAT);
     newnode->fval = fval;
