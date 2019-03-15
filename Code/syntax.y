@@ -1,7 +1,5 @@
 %{
 #include "syntaxtree.h"
-
-#define YYERROR_VERBOSE 1
 #define YYSTYPE treenode_t *
 
 int has_error = 0;
@@ -13,9 +11,21 @@ int has_error = 0;
         fflush(stderr); \
     } while (0)
 
+// #define DEBUG
+#ifdef DEBUG
+#define debug(msg) \
+    do {\
+        fprintf(stderr, "Debug at Line %d: %s\n", yylineno, msg); \
+        fflush(stderr); \
+    } while (0)
+#else
+#define debug(msg) (void *)0
+#endif
 
 #include "lex.yy.c"
 %}
+
+%define parse.error verbose
 
 %token INT FLOAT
 %token ID
@@ -67,6 +77,7 @@ ExtDef: Specifier ExtDecList SEMI {
         $$ = create_nontermnode("ExtDef", @$.first_line);
         add_child3($$, $1, $2, $3);
     }
+    | error SEMI { debug("ExtDef: error SEMI"); }
     ;
 ExtDecList: VarDec {
         $$ = create_nontermnode("ExtDecList", @$.first_line);
@@ -118,6 +129,7 @@ VarDec: ID {
         $$ = create_nontermnode("VarDec", @$.first_line);
         add_child4($$, $1, $2, $3, $4);
     }
+    | VarDec LB error RB { debug("VarDec: VarDec LB error RB"); }
     ;
 FunDec: ID LP VarList RP { 
         $$ = create_nontermnode("FunDec", @$.first_line);
@@ -127,6 +139,7 @@ FunDec: ID LP VarList RP {
         $$ = create_nontermnode("FunDec", @$.first_line);
         add_child3($$, $1, $2, $3);
     }
+    | ID LP error RP { debug("FunDec: ID LP error RP"); }
     ;
 VarList: ParamDec COMMA VarList { 
         $$ = create_nontermnode("VarList", @$.first_line);
@@ -148,6 +161,7 @@ CompSt: LC DefList StmtList RC {
         $$ = create_nontermnode("CompSt", @$.first_line);
         add_child4($$, $1, $2, $3, $4);
     }
+    | LC error RC { debug("CompSt: LC error RC"); }
     ;
 StmtList: Stmt StmtList { 
         $$ = create_nontermnode("StmtList", @$.first_line);
@@ -180,8 +194,7 @@ Stmt: Exp SEMI  {
         $$ = create_nontermnode("Stmt", @$.first_line);
         add_child5($$, $1, $2, $3, $4, $5);
     }
-    | error SEMI { printf("Stat: \';\'\n"); }
-    ;
+    ; /* Stmt -> error SEMI is handled by generator: Def-> error SEMI */
 
 /* Local Definitions */
 DefList: Def DefList {
@@ -194,6 +207,7 @@ Def: Specifier DecList SEMI {
         $$ = create_nontermnode("Def", @$.first_line);
         add_child3($$, $1, $2, $3);
     }
+    | error SEMI { debug("Def: error SEMI"); }
     ;
 DecList: Dec {
         $$ = create_nontermnode("DecList", @$.first_line);
@@ -287,6 +301,9 @@ Exp: Exp ASSIGNOP Exp {
         $$ = create_nontermnode("Exp", @$.first_line);
         add_child($$, $1);
     }
+    | LP error RP { debug("Exp: LP error RP"); }
+    | ID LP error RP { debug("Exp: ID LP error RP"); }
+    | Exp LB error RB { debug("Exp: LB error RB"); }
     ;
 Args: Exp COMMA Args {
         $$ = create_nontermnode("Args", @$.first_line);

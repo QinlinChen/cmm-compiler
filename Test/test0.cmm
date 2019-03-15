@@ -1,9 +1,18 @@
-int i, j;
+int f(int a, 
+  int b[1][2, 3], 
+   int c);
+
 struct A {
-    int i = 0, j =0;
+    int a[1, 1];
+    int b[2];
 };
 
-int main(int argc, int argv)
+int main()
 {
-    1+ 2
+    if (0 == 0) {
+        i = ;
+        i = 
+    }
+    else
+        i = ;
 }

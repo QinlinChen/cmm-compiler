@@ -1,8 +1,9 @@
 #include <stdio.h>
 
+extern int yydebug;
 void yyrestart(FILE *);
 int yyparse(void);
-extern int yydebug;
+
 
 int main(int argc, char **argv)
 {
@@ -18,5 +19,6 @@ int main(int argc, char **argv)
     yydebug = 1;
     yyrestart(f);
     yyparse();
+
     return 0;
 }
