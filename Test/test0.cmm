@@ -10,6 +10,7 @@ struct A {
 int main()
 {
     if (0 == 0) {
+        int i =;
         i = ;
         i = 
     }
