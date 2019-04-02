@@ -1,6 +1,8 @@
 #ifndef _SYNTAX_TREE_H
 #define _SYNTAX_TREE_H
 
+#include "type-system.h"
+
 typedef struct treenode
 {
     const char *name;
@@ -8,10 +10,10 @@ typedef struct treenode
     int is_term;
     int token; /* used when is_term == 1 */
     union {
-        char *id;         /* name of token ID */
-        int ival;         /* value of token INT */
-        float fval;       /* value of token FLOAT */
-        const char *type; /* type name of token TYPE */
+        char *id;       /* name of ID */
+        int ival;       /* value of INT */
+        float fval;     /* value of FLOAT */
+        int typeid;     /* typeid of TYPE */
     };
     struct treenode *child;
     struct treenode *next;
@@ -23,7 +25,7 @@ treenode_t *create_termnode(const char *name, int lineno, int token);
 treenode_t *create_idnode(int lineno, const char *id);
 treenode_t *create_intnode(int lineno, int ival);
 treenode_t *create_floatnode(int lineno, float fval);
-treenode_t *create_typenode(int lineno, const char *type);
+treenode_t *create_typenode(int lineno, const char *type_name);
 void destroy_treenode(treenode_t *node);
 
 void add_child(treenode_t *parent, treenode_t *child);
