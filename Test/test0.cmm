@@ -1,2 +1,11 @@
 int i;
-float b;
+
+struct B;
+
+struct A {
+    int a;
+    float b[10];
+    struct { int x; int y; } c;
+};
+
+struct {};

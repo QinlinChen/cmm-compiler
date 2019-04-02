@@ -1,5 +1,7 @@
 %{
 #include "syntaxtree.h"
+#include "semantics.h"
+
 #define YYSTYPE treenode_t *
 
 int has_error = 0;
@@ -55,8 +57,10 @@ int has_error = 0;
 Program: ExtDefList {
         $$ = create_nontermnode("Program", @$.first_line);
         add_child($$, $1);
-        if (!has_error)
-            print_tree($$);
+        if (!has_error) {
+            // print_tree($$);
+            semantic_analyse($$);
+        }
     }
     ;
 ExtDefList: ExtDef ExtDefList {

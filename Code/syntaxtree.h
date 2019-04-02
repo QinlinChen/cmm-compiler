@@ -13,7 +13,7 @@ typedef struct treenode
         char *id;       /* name of ID */
         int ival;       /* value of INT */
         float fval;     /* value of FLOAT */
-        int typeid;     /* typeid of TYPE */
+        int type_id;     /* typeid of TYPE */
     };
     struct treenode *child;
     struct treenode *next;
@@ -40,6 +40,5 @@ void add_child5(treenode_t *parent, treenode_t *c1, treenode_t *c2,
                 treenode_t *c3, treenode_t *c4, treenode_t *c5);
 
 void print_tree(treenode_t *root);
-void print_tree_r(treenode_t *root, int depth);
 
 #endif

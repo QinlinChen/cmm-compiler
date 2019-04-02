@@ -6,73 +6,86 @@ enum {
     TYPE_BASIC, TYPE_ARRAY, TYPE_STRUCT, TYPE_FUNC 
 };
 
-struct type {
+typedef struct type {
     int kind;
-};
+} type_t;
 
 /* basic type: T := int | float */
 enum {
     TYPE_INT, TYPE_FLOAT
 };
 
-struct type_basic {
-    int kind;
-    int type_id;
-};
-
 int typename_to_id(const char *type_name);
 const char *typeid_to_name(int id);
 
+typedef struct type_basic {
+    int kind;
+    int type_id;
+} type_basic_t;
+
+type_basic_t *create_type_basic(int type_id);
+
 /* array type: T := T[] */
-struct type_array {
+typedef struct type_array {
     int kind;
     int size;
-    struct type *extend_from;
-};
+    type_t *extend_from;
+} type_array_t;
+
+/* fieldlist */
+typedef struct fieldlistnode {
+    char *fieldname;
+    type_t *type;
+    struct filedlistnode *next;
+} fieldlistnode_t;
+
+typedef struct fieldlist {
+    fieldlistnode_t *front;
+} fieldlist_t;
+
+void init_fieldlist(fieldlist_t *fieldlist);
 
 /* struct type: T := struct_name { T fieldname; ...; } */
-struct fieldlistnode {
-    char *fieldname;
-    struct type *type;
-    struct filedlistnode *next;
-};
-
-struct fieldlist {
-    struct fieldlistnode *front;
-};
-
-struct type_struct {
+typedef struct type_struct {
     int kind;
-    struct fieldlist fields;
-};
+    char *structname;
+    fieldlist_t fields;
+} type_struct_t;
+
+type_struct_t *create_type_struct(const char *structname, fieldlist_t *fields);
+
+/* typelist */
+typedef struct typelistnode {
+    type_t *type;
+    struct typelistnode *next;
+} typelistnode_t;
+
+typedef struct typelist {
+    int size;
+    typelistnode_t *front;
+    typelistnode_t *back;
+} typelist_t;
+
+void init_typelist(typelist_t *typelist);
+void typelist_push_back(typelist_t *typelist, type_t *type);
+type_t *typelist_find_type_struct_by_name(typelist_t *typelist, const char *name);
 
 /* func type: T := T (T, T, ..., T) */
-struct typelistnode {
-    struct type *type;
-    struct typelistnode *next;
-};
-
-struct typelist {
-    struct typelistnode *front;
-};
-
-struct type_func {
+typedef struct type_func {
     int kind;
-    struct type *ret_type;
-    struct typelist types;
-};
+    type_t *ret_type;
+    typelist_t types;
+} type_func_t;
 
 /* used to store all types in one structure. */
-struct type_storage {
+typedef struct type_storage {
     union {
-        struct type t;
-        struct type_basic tb;
-        struct type_array ta;
-        struct type_struct ts;
-        struct type_func tf;
+        type_t t;
+        type_basic_t tb;
+        type_array_t ta;
+        type_struct_t ts;
+        type_func_t tf;
     };
-};
-
-
+} type_storage_t;
 
 #endif

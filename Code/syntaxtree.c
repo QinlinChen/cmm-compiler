@@ -8,6 +8,8 @@
 #include <assert.h>
 #include <string.h>
 
+void print_tree_r(treenode_t *root, int depth);
+
 treenode_t *create_treenode(const char *name, int lineno, int is_term)
 {
     treenode_t *newnode = malloc(sizeof(treenode_t));
@@ -58,7 +60,7 @@ treenode_t *create_floatnode(int lineno, float fval)
 treenode_t *create_typenode(int lineno, const char *type_name)
 {
     treenode_t *newnode = create_termnode("TYPE", lineno, TYPE);
-    newnode->typeid = typename_to_id(type_name);
+    newnode->type_id = typename_to_id(type_name);
     return newnode;
 }
 
@@ -143,7 +145,7 @@ void print_tree_r(treenode_t *root, int depth)
         case ID:    printf(": %s", root->id); break;
         case INT:   printf(": %d", root->ival); break;
         case FLOAT: printf(": %f", root->fval); break;
-        case TYPE:  printf(": %s", typeid_to_name(root->typeid)); break;
+        case TYPE:  printf(": %s", typeid_to_name(root->type_id)); break;
         default:    break;
         }
     }
