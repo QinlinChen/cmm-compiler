@@ -58,7 +58,8 @@ type_struct_t *structdef_table_find_by_name(const char *structname)
 void semantic_analyse_r(treenode_t *node, treenode_t *parent);
 type_t *analyse_specifier(treenode_t *specifier);
 type_t *analyse_struct_specifier(treenode_t *struct_specifier);
-void analyse_def_list(treenode_t *def_list, fieldlist_t *ret_feildlist);
+fieldlist_t analyse_def_list(treenode_t *def_list);
+void analyse_def(treenode_t *def, fieldlist_t *fieldlist);
 
 void semantic_analyse(treenode_t *root)
 {
@@ -107,34 +108,68 @@ type_t *analyse_struct_specifier(treenode_t *struct_specifier)
     assert(struct_specifier->child);
     treenode_t *child2 = struct_specifier->child->next;
     assert(child2);
-
-    const char *structname = NULL;
-    fieldlist_t fieldlist;
     type_struct_t *structdef = NULL;
 
     if (!strcmp(child2->name, "OptTag")) {
-        /* Create a named struct type. */
-        assert(child2->child->token == ID);
-        structname = child2->child->id;
-        analyse_def_list(child2->next->next, &fieldlist);
-        return (type_t *)create_type_struct(structname, &fieldlist);
-    }
-    if (!strcmp(child2->name, "Tag")) {
-        /* Get a defined struct type from the structdef_table */
-        assert(child2->child->token == ID);
-        structname = child2->child->id;
-        if (!(structdef = structdef_table_find_by_name(structname)))
-            semantic_error(17, child2->lineno, "Undefined structure \"%s\"",
-                           structname);
+        /* In this case, we create a named struct type
+         * and add it to structdef_table. */
+        treenode_t *id = child2->child;
+        treenode_t *def_list = child2->next->next;
+        assert(id->token == ID);
+        assert(id->id);
+        fieldlist_t fieldlist = analyse_def_list(def_list);
+        structdef = create_type_struct(id->id, &fieldlist);
+        if (structdef_table_find_by_name(structdef->structname))
+            semantic_error(16, id->lineno, "Duplicated name \"%s\"",
+                           structdef->structname);
+        structdef_table_add(structdef);
         return (type_t *)structdef;
     }
-    /* Create an anonymous struct type. */
+    if (!strcmp(child2->name, "Tag")) {
+        /* In this case, we search an already defined struct type
+         * from the structdef_table */
+        treenode_t *id = child2->child;
+        assert(id->token == ID);
+        if (!(structdef = structdef_table_find_by_name(id->id)))
+            semantic_error(17, child2->lineno, "Undefined structure \"%s\"",
+                           id->id);
+        return (type_t *)structdef;     /* can be NULL */
+    }
     assert(!strcmp(child2->name, "LC"));
-    analyse_def_list(child2->next, &fieldlist);
-    return (type_t *)create_type_struct(structname, &fieldlist);
+    /* In this case, we create an anonymous struct type
+     * and add it to structdef_table. */
+    if (!strcmp(child2->next->name, "RC")) {
+        structdef = create_type_struct(NULL, NULL);
+    }
+    else {
+        fieldlist_t fieldlist = analyse_def_list(child2->next);
+        structdef = create_type_struct(NULL, &fieldlist);
+    }
+    structdef_table_add(structdef);
+    return (type_t *)structdef;
 }
 
-void analyse_def_list(treenode_t *def_list, fieldlist_t *ret_feildlist)
+fieldlist_t analyse_def_list(treenode_t *def_list)
 {
-    // TODO:
+
+}
+
+void analyse_def(treenode_t *def, fieldlist_t *fieldlist)
+{
+
+}
+
+void analyse_dec_list(treenode_t *dec_list, type_t *spec, fieldlist_t *fieldlist)
+{
+
+}
+
+void analyse_dec(treenode_t *dec, type_t *spec, fieldlist_t *fieldlist)
+{
+
+}
+
+type_t *analyse_var_dec(treenode_t *var_dec, type_t *spec)
+{
+
 }

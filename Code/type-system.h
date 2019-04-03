@@ -40,10 +40,15 @@ typedef struct fieldlistnode {
 } fieldlistnode_t;
 
 typedef struct fieldlist {
+    int size;
     fieldlistnode_t *front;
+    fieldlistnode_t *back;
 } fieldlist_t;
 
 void init_fieldlist(fieldlist_t *fieldlist);
+void fieldlist_push_back(fieldlist_t *fieldlist,
+                         const char *fieldname, type_t *type);
+void fieldlist_concat(fieldlist_t *lhs, fieldlist_t *rhs);
 
 /* struct type: T := struct_name { T fieldname; ...; } */
 typedef struct type_struct {

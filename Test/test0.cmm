@@ -8,4 +8,6 @@ struct A {
     struct { int x; int y; } c;
 };
 
-struct {};
+struct C {
+    int i = 1;
+};

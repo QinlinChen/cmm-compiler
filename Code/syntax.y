@@ -58,7 +58,7 @@ Program: ExtDefList {
         $$ = create_nontermnode("Program", @$.first_line);
         add_child($$, $1);
         if (!has_error) {
-            // print_tree($$);
+            print_tree($$);
             semantic_analyse($$);
         }
     }

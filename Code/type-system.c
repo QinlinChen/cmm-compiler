@@ -49,6 +49,40 @@ void init_fieldlist(fieldlist_t *fieldlist)
     fieldlist->front = NULL;
 }
 
+void fieldlist_push_back(fieldlist_t *fieldlist,
+                         const char *fieldname, type_t *type)
+{
+    assert(fieldlist);
+    fieldlistnode_t *newnode = malloc(sizeof(fieldlistnode_t));
+    assert(newnode);
+    newnode->fieldname = strdup(fieldname);
+    newnode->type = type;
+    newnode->next = NULL;
+
+    if (fieldlist->size == 0)
+        fieldlist->front = newnode;
+    else
+        fieldlist->back->next = newnode;
+    fieldlist->back = newnode;
+    fieldlist->size++;
+}
+
+void fieldlist_concat(fieldlist_t *lhs, fieldlist_t *rhs)
+{
+    assert(lhs);
+    assert(rhs);
+    if (rhs->size == 0)
+        return;
+
+    if (lhs->size == 0) {
+        *lhs = *rhs;
+    }
+    else {
+        lhs->back->next = rhs->front;
+        lhs->back = rhs->back;
+    }
+}
+
 /* ------------------------------------ *
  *             struct type              *
  * ------------------------------------ */
@@ -73,12 +107,14 @@ type_struct_t *create_type_struct(const char *structname, fieldlist_t *fields)
 
 void init_typelist(typelist_t *typelist)
 {
+    assert(typelist);
     typelist->size = 0;
     typelist->front = typelist->back = NULL;
 }
 
 void typelist_push_back(typelist_t *typelist, type_t *type)
 {
+    assert(type);
     typelistnode_t *newnode = malloc(sizeof(typelistnode_t));
     assert(newnode);
     newnode->type = type;
@@ -94,11 +130,18 @@ void typelist_push_back(typelist_t *typelist, type_t *type)
 
 type_t *typelist_find_type_struct_by_name(typelist_t *typelist, const char *name)
 {
+    assert(typelist);
+    if (!name)
+        return NULL;
+
     for (typelistnode_t *cur = typelist->front;
          cur != typelist->back; cur = cur->next) {
-        if (cur->type->kind == TYPE_STRUCT)
-            if (!strcmp(((type_struct_t *)cur->type)->structname, name))
+        assert(cur->type);
+        if (cur->type->kind == TYPE_STRUCT) {
+            type_struct_t *ts = cur->type;
+            if (ts->structname && !strcmp(ts->structname, name))
                 return cur->type;
+        }
     }
     return NULL;
 }
