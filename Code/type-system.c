@@ -8,6 +8,22 @@
 #include <assert.h>
 
 /* ------------------------------------ *
+ *            abstract type             *
+ * ------------------------------------ */
+
+void print_type(type_t *type)
+{
+    assert(type);
+    switch (type->kind) {
+        case TYPE_BASIC: print_type_basic((type_basic_t *)type); break;
+        case TYPE_ARRAY: print_type_array((type_array_t *)type); break;
+        case TYPE_STRUCT: print_type_struct((type_struct_t *)type); break;
+        case TYPE_FUNC: print_type_func((type_func_t *)type); break;
+        default: assert(0); break;
+    }   
+}
+
+/* ------------------------------------ *
  *             basic type               *
  * ------------------------------------ */
 
@@ -40,30 +56,83 @@ type_basic_t *create_type_basic(int type_id)
     return tb;
 }
 
+void print_type_basic(type_basic_t *tb)
+{
+    switch (tb->type_id) {
+        case TYPE_INT: printf("int"); break;
+        case TYPE_FLOAT: printf("float"); break;
+        default: assert(0); break;
+    }
+}
+
+/* ------------------------------------ *
+ *             array type               *
+ * ------------------------------------ */
+
+type_array_t *create_type_array(int size, type_t *extend_from)
+{
+    type_array_t *ta = malloc(sizeof(type_array_t));
+    assert(ta);
+    ta->kind = TYPE_ARRAY;
+    ta->size = size;
+    ta->extend_from = extend_from;
+    return ta;
+}
+
+void print_type_array(type_array_t *ta)
+{
+    printf("[%d]", ta->size);
+    print_type(ta->extend_from);
+}
+
 /* ------------------------------------ *
  *              fieldlist               *
  * ------------------------------------ */
 
 void init_fieldlist(fieldlist_t *fieldlist)
 {
-    fieldlist->front = NULL;
+    fieldlist->size = 0;
+    fieldlist->front = fieldlist->back = NULL;
+}
+
+fieldlistnode_t *create_fieldlistnode(const char *fieldname, type_t *type)
+{
+    fieldlistnode_t *newnode = malloc(sizeof(fieldlistnode_t));
+    if (newnode){
+        newnode->fieldname = strdup(fieldname);
+        newnode->type = type;
+        newnode->next = NULL;
+    }
+    return newnode;
 }
 
 void fieldlist_push_back(fieldlist_t *fieldlist,
                          const char *fieldname, type_t *type)
 {
     assert(fieldlist);
-    fieldlistnode_t *newnode = malloc(sizeof(fieldlistnode_t));
+    fieldlistnode_t *newnode = create_fieldlistnode(fieldname, type);
     assert(newnode);
-    newnode->fieldname = strdup(fieldname);
-    newnode->type = type;
-    newnode->next = NULL;
 
     if (fieldlist->size == 0)
         fieldlist->front = newnode;
     else
         fieldlist->back->next = newnode;
     fieldlist->back = newnode;
+    fieldlist->size++;
+}
+
+void fieldlist_push_front(fieldlist_t *fieldlist,
+                          const char *fieldname, type_t *type)
+{
+    assert(fieldlist);
+    fieldlistnode_t *newnode = create_fieldlistnode(fieldname, type);
+    assert(newnode);
+
+    if (fieldlist->size == 0)
+        fieldlist->back = newnode;
+    else 
+        newnode->next = fieldlist->front;
+    fieldlist->front = newnode;
     fieldlist->size++;
 }
 
@@ -99,6 +168,11 @@ type_struct_t *create_type_struct(const char *structname, fieldlist_t *fields)
     if (fields)
         ts->fields = *fields;
     return ts;
+}
+
+void print_type_struct(type_struct_t *ts)
+{
+
 }
 
 /* ------------------------------------ *
@@ -138,10 +212,19 @@ type_t *typelist_find_type_struct_by_name(typelist_t *typelist, const char *name
          cur != typelist->back; cur = cur->next) {
         assert(cur->type);
         if (cur->type->kind == TYPE_STRUCT) {
-            type_struct_t *ts = cur->type;
+            type_struct_t *ts = (type_struct_t *)cur->type;
             if (ts->structname && !strcmp(ts->structname, name))
                 return cur->type;
         }
     }
     return NULL;
+}
+
+/* ------------------------------------ *
+ *              func type               *
+ * ------------------------------------ */
+
+void print_type_func(type_func_t *tf)
+{
+    printf("TODO: print_type_func!\n");
 }

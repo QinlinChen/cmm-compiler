@@ -10,6 +10,8 @@ typedef struct type {
     int kind;
 } type_t;
 
+void print_type(type_t *type);
+
 /* basic type: T := int | float */
 enum {
     TYPE_INT, TYPE_FLOAT
@@ -24,6 +26,7 @@ typedef struct type_basic {
 } type_basic_t;
 
 type_basic_t *create_type_basic(int type_id);
+void print_type_basic(type_basic_t *tb);
 
 /* array type: T := T[] */
 typedef struct type_array {
@@ -32,12 +35,17 @@ typedef struct type_array {
     type_t *extend_from;
 } type_array_t;
 
+type_array_t *create_type_array(int size, type_t *extend_from);
+void print_type_array(type_array_t *ta);
+
 /* fieldlist */
 typedef struct fieldlistnode {
     char *fieldname;
     type_t *type;
-    struct filedlistnode *next;
+    struct fieldlistnode *next;
 } fieldlistnode_t;
+
+fieldlistnode_t *create_fieldlistnode(const char *fieldname, type_t *type);
 
 typedef struct fieldlist {
     int size;
@@ -48,6 +56,8 @@ typedef struct fieldlist {
 void init_fieldlist(fieldlist_t *fieldlist);
 void fieldlist_push_back(fieldlist_t *fieldlist,
                          const char *fieldname, type_t *type);
+void fieldlist_push_front(fieldlist_t *fieldlist,
+                          const char *fieldname, type_t *type);
 void fieldlist_concat(fieldlist_t *lhs, fieldlist_t *rhs);
 
 /* struct type: T := struct_name { T fieldname; ...; } */
@@ -58,6 +68,7 @@ typedef struct type_struct {
 } type_struct_t;
 
 type_struct_t *create_type_struct(const char *structname, fieldlist_t *fields);
+void print_type_struct(type_struct_t *ts);
 
 /* typelist */
 typedef struct typelistnode {
@@ -81,6 +92,8 @@ typedef struct type_func {
     type_t *ret_type;
     typelist_t types;
 } type_func_t;
+
+void print_type_func(type_func_t *tf);
 
 /* used to store all types in one structure. */
 typedef struct type_storage {
