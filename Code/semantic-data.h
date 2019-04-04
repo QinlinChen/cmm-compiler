@@ -17,5 +17,8 @@ typedef struct symbol {
 
 void init_symbol_table();
 void symbol_table_add(symbol_t *symbol);
+void symbol_table_pushenv();
+void symbol_table_popenv();
+void print_symbol_table();
 
 #endif
