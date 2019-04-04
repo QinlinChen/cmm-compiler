@@ -13,12 +13,17 @@ void print_structdef_table();
 typedef struct symbol {
     type_t *type;
     const char *name;
+    int lineno;
+    int is_defined;
 } symbol_t;
 
+void init_symbol(symbol_t *symbol, type_t *type, const char *name,
+                 int lineno, int is_defined);
 void init_symbol_table();
 void symbol_table_add(symbol_t *symbol);
 void symbol_table_pushenv();
 void symbol_table_popenv();
+int symbol_table_find_by_name(const char *name, symbol_t *ret);
 void print_symbol_table();
 
 #endif

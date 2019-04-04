@@ -23,4 +23,6 @@ struct E {
     int i = 1;
     int j, k;
     int k = 2;
-};
+} a, b;
+
+struct A c;

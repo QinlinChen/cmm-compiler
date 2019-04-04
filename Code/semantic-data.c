@@ -78,9 +78,10 @@ typedef struct hashtable {
 unsigned int hash_str(const char *str);
 unsigned int hash_symbol(symbol_t *symbol);
 void init_hashtable(hashtable_t *hashtable);
-stnode_t **hashtable_get_slot(hashtable_t *hashtable, stnode_t *stnode);
+stnode_t **hashtable_get_slot(hashtable_t *hashtable, const char *name);
 void hashtable_add(hashtable_t *hashtable, stnode_t *stnode);
 void hashtable_delete(hashtable_t *hashtable, stnode_t *stnode);
+stnode_t *hashtable_find_by_name(hashtable_t *hashtable, const char *name);
 void print_hashtable(hashtable_t *hashtable);
 
 /* symbol table */
@@ -163,7 +164,7 @@ void envstack_add(envstack_t *envstack, stnode_t *stnode)
 void print_envstack(envstack_t *envstack)
 {
     assert(envstack);
-    int i = 0; 
+    int i = 0;
     for (envnode_t *env = envstack->top; env != NULL; env = env->before) {
         for (stnode_t *node = env->symbol_head; node != NULL; node = node->sibling) {
             printf("%s: ",node->symbol.name);
@@ -187,22 +188,16 @@ unsigned int hash_str(const char *str)
     return val;
 }
 
-unsigned int hash_symbol(symbol_t *symbol)
-{
-    assert(symbol);
-    return hash_str(symbol->name);
-}
-
 void init_hashtable(hashtable_t *hashtable)
 {
     assert(hashtable);
     memset(hashtable->slots, 0, sizeof(hashtable->slots));
 }
 
-stnode_t **hashtable_get_slot(hashtable_t *hashtable, stnode_t *stnode)
+stnode_t **hashtable_get_slot(hashtable_t *hashtable, const char *name)
 {
     assert(hashtable);
-    unsigned int index = hash_symbol(&stnode->symbol) % HT_SIZE;
+    unsigned int index = hash_str(name) % HT_SIZE;
     return &(hashtable->slots[index]);
 }
 
@@ -210,7 +205,7 @@ void hashtable_add(hashtable_t *hashtable, stnode_t *stnode)
 {
     assert(hashtable);
     assert(stnode);
-    stnode_t **phead = hashtable_get_slot(hashtable, stnode);
+    stnode_t **phead = hashtable_get_slot(hashtable, stnode->symbol.name);
     stnode->next = *phead;
     if (*phead)
         (*phead)->prev = stnode;
@@ -222,13 +217,22 @@ void hashtable_delete(hashtable_t *hashtable, stnode_t *stnode)
 {
     assert(hashtable);
     assert(stnode);
-    stnode_t **phead = hashtable_get_slot(hashtable, stnode);
+    stnode_t **phead = hashtable_get_slot(hashtable, stnode->symbol.name);
     if (stnode->prev)
         stnode->prev->next = stnode->next;
     else
         *phead = stnode->next;
     if (stnode->next)
         stnode->next->prev = stnode->prev;
+}
+
+stnode_t *hashtable_find_by_name(hashtable_t *hashtable, const char *name)
+{
+    stnode_t **phead = hashtable_get_slot(hashtable, name);
+    for (stnode_t *cur = *phead; cur != NULL; cur = cur->next)
+        if (!strcmp(cur->symbol.name, name))
+            return cur;
+    return NULL;
 }
 
 void print_hashtable(hashtable_t *hashtable)
@@ -245,6 +249,15 @@ void print_hashtable(hashtable_t *hashtable)
                 printf("\n");
         }
     }
+}
+
+void init_symbol(symbol_t *symbol, type_t *type, const char *name,
+                 int lineno, int is_defined)
+{
+    symbol->type = type;
+    symbol->name = name;
+    symbol->lineno = lineno;
+    symbol->is_defined = is_defined;
 }
 
 void init_symbol_table()
@@ -275,6 +288,16 @@ void symbol_table_popenv()
         destroy_stnode(head, NULL);
         head = sibling;
     }
+}
+
+int symbol_table_find_by_name(const char *name, symbol_t *ret)
+{
+    stnode_t *result = hashtable_find_by_name(&symbol_table.hashtable, name);
+    if (!result)
+        return -1;  /* failure */
+    if (ret)
+        *ret = result->symbol;
+    return 0;   /* success */
 }
 
 void print_symbol_table()
