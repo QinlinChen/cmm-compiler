@@ -58,6 +58,7 @@ type_basic_t *create_type_basic(int type_id)
 
 void print_type_basic(type_basic_t *tb)
 {
+    assert(tb);
     switch (tb->type_id) {
         case TYPE_INT: printf("int"); break;
         case TYPE_FLOAT: printf("float"); break;
@@ -81,6 +82,7 @@ type_array_t *create_type_array(int size, type_t *extend_from)
 
 void print_type_array(type_array_t *ta)
 {
+    assert(ta);
     printf("[%d]", ta->size);
     print_type(ta->extend_from);
 }
@@ -136,19 +138,23 @@ void fieldlist_push_front(fieldlist_t *fieldlist,
     fieldlist->size++;
 }
 
-void fieldlist_concat(fieldlist_t *lhs, fieldlist_t *rhs)
+type_t *fieldlist_find_type_by_fieldname(fieldlist_t *fieldlist,
+                                         const char *fieldname)
 {
-    assert(lhs);
-    assert(rhs);
-    if (rhs->size == 0)
-        return;
+    for (fieldlistnode_t *cur = fieldlist->front; cur != NULL; cur = cur->next)
+        if (!strcmp(cur->fieldname, fieldname))
+            return cur->type;
+    return NULL;
+}
 
-    if (lhs->size == 0) {
-        *lhs = *rhs;
-    }
-    else {
-        lhs->back->next = rhs->front;
-        lhs->back = rhs->back;
+void print_fieldlist(fieldlist_t *fieldlist)
+{
+    for (fieldlistnode_t *cur = fieldlist->front; cur != NULL; cur = cur->next) {
+        printf("%s: ", cur->fieldname);
+        print_type(cur->type);
+        printf(";");
+        if (cur->next)
+            printf(" ");
     }
 }
 
@@ -172,7 +178,13 @@ type_struct_t *create_type_struct(const char *structname, fieldlist_t *fields)
 
 void print_type_struct(type_struct_t *ts)
 {
-
+    assert(ts);
+    printf("struct");
+    if (ts->structname)
+        printf(" %s", ts->structname);
+    printf(" { ");
+    print_fieldlist(&ts->fields);
+    printf(" }");
 }
 
 /* ------------------------------------ *
@@ -202,19 +214,19 @@ void typelist_push_back(typelist_t *typelist, type_t *type)
     typelist->size++;
 }
 
-type_t *typelist_find_type_struct_by_name(typelist_t *typelist, const char *name)
+type_struct_t *typelist_find_type_struct_by_name(typelist_t *typelist,
+                                                 const char *name)
 {
     assert(typelist);
     if (!name)
         return NULL;
 
-    for (typelistnode_t *cur = typelist->front;
-         cur != typelist->back; cur = cur->next) {
+    for (typelistnode_t *cur = typelist->front; cur != NULL; cur = cur->next) {
         assert(cur->type);
         if (cur->type->kind == TYPE_STRUCT) {
             type_struct_t *ts = (type_struct_t *)cur->type;
             if (ts->structname && !strcmp(ts->structname, name))
-                return cur->type;
+                return ts;
         }
     }
     return NULL;

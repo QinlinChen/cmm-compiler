@@ -58,7 +58,8 @@ void fieldlist_push_back(fieldlist_t *fieldlist,
                          const char *fieldname, type_t *type);
 void fieldlist_push_front(fieldlist_t *fieldlist,
                           const char *fieldname, type_t *type);
-void fieldlist_concat(fieldlist_t *lhs, fieldlist_t *rhs);
+type_t *fieldlist_find_type_by_fieldname(fieldlist_t *fieldlist,
+                                         const char *fieldname);
 
 /* struct type: T := struct_name { T fieldname; ...; } */
 typedef struct type_struct {
@@ -84,7 +85,8 @@ typedef struct typelist {
 
 void init_typelist(typelist_t *typelist);
 void typelist_push_back(typelist_t *typelist, type_t *type);
-type_t *typelist_find_type_struct_by_name(typelist_t *typelist, const char *name);
+type_struct_t *typelist_find_type_struct_by_name(typelist_t *typelist,
+                                                 const char *name);
 
 /* func type: T := T (T, T, ..., T) */
 typedef struct type_func {

@@ -1,17 +1,26 @@
-/* int i;
+int i;
 
 struct B;
 
 struct A {
     int a;
-    float b[10];
-    struct { int x; int y; } c;
+    float b[10][20][30];
+    struct B { int x; int y; } c;
 };
- */
-struct A {
 
+struct AA {
+    struct B b;
+    struct E e;
 };
 
 struct C {
+    struct C { int x; } b;
+};
+
+struct D { };
+
+struct E {
     int i = 1;
+    int j, k;
+    int k = 2;
 };

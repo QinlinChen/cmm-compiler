@@ -47,8 +47,7 @@ void structdef_table_add(type_struct_t *structdef)
 
 type_struct_t *structdef_table_find_by_name(const char *structname)
 {
-    return (type_struct_t *)typelist_find_type_struct_by_name(
-        &structdef_table, structname);
+    return typelist_find_type_struct_by_name(&structdef_table, structname);
 }
 
 /* ------------------------------------ *
@@ -86,6 +85,13 @@ void semantic_analyse_r(treenode_t *node, treenode_t *parent)
 
     if (!strcmp(node->name, "Specifier")) {
         type_t *ret = analyse_specifier(node);
+        if (ret) {
+            print_type(ret);
+            printf("\n");
+        }
+        else {
+            printf("NULL\n");
+        }
         return;
     }
     // TODO: handle other TOKEN.
@@ -97,20 +103,15 @@ void semantic_analyse_r(treenode_t *node, treenode_t *parent)
 
 type_t *analyse_specifier(treenode_t *specifier)
 {
-    printf("analyse_specifier\n");
     assert(specifier);
     assert(!strcmp(specifier->name, "Specifier"));
     treenode_t *child = specifier->child;
     assert(child);
 
-    if (!strcmp(child->name, "TYPE")) {
-        printf("get TYPE\n");
+    if (!strcmp(child->name, "TYPE"))
         return (type_t *)create_type_basic(child->type_id);
-    }
-    if (!strcmp(child->name, "StructSpecifier")) {
-        printf("get StructSpecifier\n");
+    if (!strcmp(child->name, "StructSpecifier"))
         return analyse_struct_specifier(child);
-    }
 
     assert(0);  /* Should not reach here! */
     return NULL;
@@ -118,7 +119,6 @@ type_t *analyse_specifier(treenode_t *specifier)
 
 type_t *analyse_struct_specifier(treenode_t *struct_specifier)
 {
-    printf("analyse_struct_specifier\n");
     assert(struct_specifier);
     assert(!strcmp(struct_specifier->name, "StructSpecifier"));
     assert(struct_specifier->child);
@@ -132,19 +132,15 @@ type_t *analyse_struct_specifier(treenode_t *struct_specifier)
         treenode_t *id = child2->child;
         assert(id->token == ID);
         assert(id->id);
+        fieldlist_t fieldlist;
+        init_fieldlist(&fieldlist);
+        if (strcmp(child2->next->next->name, "RC"))
+            analyse_def_list(child2->next->next, &fieldlist,
+                             /* is_during_structdef */ 1);
+        structdef = create_type_struct(id->id, &fieldlist);
         if (structdef_table_find_by_name(id->id)) {
             semantic_error(16, id->lineno, "Duplicated name \"%s\"", id->id);
             return NULL;
-        }
-        if (!strcmp(child2->next->next->name, "RC")) {
-            structdef = create_type_struct(id->id, NULL);
-        }
-        else {
-            fieldlist_t fieldlist;
-            init_fieldlist(&fieldlist);
-            analyse_def_list(child2->next->next, &fieldlist,
-                             /* is_during_structdef */ 1);
-            structdef = create_type_struct(id->id, &fieldlist);
         }
         structdef_table_add(structdef);
         return (type_t *)structdef;
@@ -163,15 +159,12 @@ type_t *analyse_struct_specifier(treenode_t *struct_specifier)
     assert(!strcmp(child2->name, "LC"));
     /* In this case, we create an anonymous struct type
      * and add it to structdef_table. */
-    if (!strcmp(child2->next->name, "RC")) {
-        structdef = create_type_struct(NULL, NULL);
-    }
-    else {
-        fieldlist_t fieldlist;
-        init_fieldlist(&fieldlist);
-        analyse_def_list(child2->next, &fieldlist, /* is_during_structdef */ 1);
-        structdef = create_type_struct(NULL, &fieldlist);
-    }
+    fieldlist_t fieldlist;
+    init_fieldlist(&fieldlist);
+    if (strcmp(child2->next->name, "RC"))
+        analyse_def_list(child2->next, &fieldlist,
+                         /* is_during_structdef */ 1);
+    structdef = create_type_struct(NULL, &fieldlist);
     structdef_table_add(structdef);
     return (type_t *)structdef;
 }
@@ -179,7 +172,6 @@ type_t *analyse_struct_specifier(treenode_t *struct_specifier)
 void analyse_def_list(treenode_t *def_list, fieldlist_t *fieldlist,
                       int is_during_structdef)
 {
-    printf("analyse_def_list\n");
     assert(def_list);
     assert(!strcmp(def_list->name, "DefList"));
     treenode_t *def = def_list->child;
@@ -193,7 +185,6 @@ void analyse_def_list(treenode_t *def_list, fieldlist_t *fieldlist,
 void analyse_def(treenode_t *def, fieldlist_t *fieldlist,
                  int is_during_structdef)
 {
-    printf("analyse_def\n");
     assert(def);
     assert(!strcmp(def->name, "Def"));
     treenode_t *specifier = def->child;
@@ -208,7 +199,6 @@ void analyse_def(treenode_t *def, fieldlist_t *fieldlist,
 void analyse_dec_list(treenode_t *dec_list, type_t *spec, fieldlist_t *fieldlist,
                       int is_during_structdef)
 {
-    printf("analyse_dec_list\n");
     assert(dec_list);
     assert(!strcmp(dec_list->name, "DecList"));
     treenode_t *dec = dec_list->child;
@@ -222,7 +212,6 @@ void analyse_dec_list(treenode_t *dec_list, type_t *spec, fieldlist_t *fieldlist
 void analyse_dec(treenode_t *dec, type_t *spec, fieldlist_t *fieldlist,
                  int is_during_structdef)
 {
-    printf("analyse_dec\n");
     assert(dec);
     assert(!strcmp(dec->name, "Dec"));
     treenode_t *var_dec = dec->child;
@@ -237,7 +226,7 @@ void analyse_dec(treenode_t *dec, type_t *spec, fieldlist_t *fieldlist,
                            "Field assigned during definition");
         }
         else {
-            /* Do something in future. */
+            /* TODO: Do something in the future. */
         }
     }
 }
@@ -245,14 +234,17 @@ void analyse_dec(treenode_t *dec, type_t *spec, fieldlist_t *fieldlist,
 void analyse_var_dec(treenode_t *var_dec, type_t *spec, fieldlist_t *fieldlist,
                      int is_during_structdef)
 {
-    printf("analyse_var_dec\n");
     assert(var_dec);
     assert(!strcmp(var_dec->name, "VarDec"));
     treenode_t *child = var_dec->child;
     assert(child);
 
     if (!strcmp(child->name, "ID")) {
-        fieldlist_push_back(fieldlist, child->id, spec);
+        assert(child->id);
+        if (fieldlist_find_type_by_fieldname(fieldlist, child->id))
+            semantic_error(15, child->lineno, "Redefined field \"%s\"", child->id);
+        else
+            fieldlist_push_back(fieldlist, child->id, spec);
         return;
     }
     assert(child->next);
