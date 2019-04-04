@@ -81,6 +81,10 @@ ExtDef: Specifier ExtDecList SEMI {
         $$ = create_nontermnode("ExtDef", @$.first_line);
         add_child3($$, $1, $2, $3);
     }
+    | Specifier FunDec SEMI {
+        $$ = create_nontermnode("ExtDef", @$.first_line);
+        add_child3($$, $1, $2, $3);
+    }
     | error SEMI { debug("ExtDef: error SEMI"); }
     ;
 ExtDecList: VarDec {

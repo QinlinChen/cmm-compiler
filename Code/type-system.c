@@ -20,7 +20,7 @@ void print_type(type_t *type)
         case TYPE_STRUCT: print_type_struct((type_struct_t *)type); break;
         case TYPE_FUNC: print_type_func((type_func_t *)type); break;
         default: assert(0); break;
-    }   
+    }
 }
 
 /* ------------------------------------ *
@@ -132,7 +132,7 @@ void fieldlist_push_front(fieldlist_t *fieldlist,
 
     if (fieldlist->size == 0)
         fieldlist->back = newnode;
-    else 
+    else
         newnode->next = fieldlist->front;
     fieldlist->front = newnode;
     fieldlist->size++;
@@ -191,6 +191,16 @@ void print_type_struct(type_struct_t *ts)
  *              typelist                *
  * ------------------------------------ */
 
+typelistnode_t *create_typelistnode(type_t *type)
+{
+    typelistnode_t *newnode = malloc(sizeof(typelistnode_t));
+    if (newnode) {
+        newnode->type = type;
+        newnode->next = NULL;
+    }
+    return newnode;
+}
+
 void init_typelist(typelist_t *typelist)
 {
     assert(typelist);
@@ -201,10 +211,8 @@ void init_typelist(typelist_t *typelist)
 void typelist_push_back(typelist_t *typelist, type_t *type)
 {
     assert(type);
-    typelistnode_t *newnode = malloc(sizeof(typelistnode_t));
+    typelistnode_t *newnode = create_typelistnode(type);
     assert(newnode);
-    newnode->type = type;
-    newnode->next = NULL;
 
     if (typelist->size == 0)
         typelist->front = newnode;
@@ -230,6 +238,15 @@ type_struct_t *typelist_find_type_struct_by_name(typelist_t *typelist,
         }
     }
     return NULL;
+}
+
+void print_typelist(typelist_t *typelist)
+{
+    for (typelistnode_t *cur = typelist->front; cur != NULL; cur = cur->next) {
+        print_type(cur->type);
+        if (cur->next)
+            printf(", ");
+    }
 }
 
 /* ------------------------------------ *

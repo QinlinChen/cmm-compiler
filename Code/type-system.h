@@ -3,7 +3,7 @@
 
 /* abstract type: other types inherit from it. */
 enum {
-    TYPE_BASIC, TYPE_ARRAY, TYPE_STRUCT, TYPE_FUNC 
+    TYPE_BASIC, TYPE_ARRAY, TYPE_STRUCT, TYPE_FUNC
 };
 
 typedef struct type {
@@ -77,6 +77,8 @@ typedef struct typelistnode {
     struct typelistnode *next;
 } typelistnode_t;
 
+typelistnode_t *create_typelistnode(type_t *type);
+
 typedef struct typelist {
     int size;
     typelistnode_t *front;
@@ -87,6 +89,7 @@ void init_typelist(typelist_t *typelist);
 void typelist_push_back(typelist_t *typelist, type_t *type);
 type_struct_t *typelist_find_type_struct_by_name(typelist_t *typelist,
                                                  const char *name);
+void print_typelist(typelist_t *typelist);
 
 /* func type: T := T (T, T, ..., T) */
 typedef struct type_func {

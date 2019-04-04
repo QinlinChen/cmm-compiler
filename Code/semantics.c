@@ -1,5 +1,6 @@
 #include "semantics.h"
 #include "syntax.tab.h"
+#include "semantic-data.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,36 +31,11 @@ int has_semantic_error()
 }
 
 /* ------------------------------------ *
- *  the table of structure definitions  *
+ *           semantic analyse           *
  * ------------------------------------ */
 
-static typelist_t structdef_table;
-
-void init_structdef_table()
-{
-    init_typelist(&structdef_table);
-}
-
-void structdef_table_add(type_struct_t *structdef)
-{
-    typelist_push_back(&structdef_table, (type_t *)structdef);
-}
-
-type_struct_t *structdef_table_find_by_name(const char *structname)
-{
-    return typelist_find_type_struct_by_name(&structdef_table, structname);
-}
-
-/* ------------------------------------ *
- *             symbol table             *
- * ------------------------------------ */
-
-
-/* ------------------------------------ *
- *           semantic_analyse           *
- * ------------------------------------ */
-
-void semantic_analyse_r(treenode_t *node, treenode_t *parent);
+void semantic_analyse_r(treenode_t *node);
+void analyse_ext_def(treenode_t *ext_def);
 type_t *analyse_specifier(treenode_t *specifier);
 type_t *analyse_struct_specifier(treenode_t *struct_specifier);
 void analyse_def_list(treenode_t *def_list, fieldlist_t *fieldlist,
@@ -75,30 +51,39 @@ void analyse_var_dec(treenode_t *var_dec, type_t *spec, fieldlist_t *fieldlist,
 
 void semantic_analyse(treenode_t *root)
 {
-    semantic_analyse_r(root, NULL);
+    semantic_analyse_r(root);
+    print_structdef_table();
 }
 
-void semantic_analyse_r(treenode_t *node, treenode_t *parent)
+/* Recursively find ExtDef and begin our analysis. */
+void semantic_analyse_r(treenode_t *node)
 {
     if (!node)
         return;
 
-    if (!strcmp(node->name, "Specifier")) {
-        type_t *ret = analyse_specifier(node);
-        if (ret) {
-            print_type(ret);
-            printf("\n");
-        }
-        else {
-            printf("NULL\n");
-        }
+    if (!strcmp(node->name, "ExtDef")) {
+        analyse_ext_def(node);
         return;
     }
-    // TODO: handle other TOKEN.
 
-    for (treenode_t *child = node->child; child != NULL; child = child->next) {
-        semantic_analyse_r(child, node);
+    for (treenode_t *child = node->child; child != NULL; child = child->next)
+        semantic_analyse_r(child);
+}
+
+void analyse_ext_def(treenode_t *ext_def)
+{
+    assert(ext_def);
+    assert(!strcmp(ext_def->name, "ExtDef"));
+
+    type_t *ret = analyse_specifier(ext_def->child);
+    if (ret) {
+        print_type(ret);
+        printf("\n");
     }
+    else {
+        printf("NULL\n");
+    }
+    // TODO:
 }
 
 type_t *analyse_specifier(treenode_t *specifier)
