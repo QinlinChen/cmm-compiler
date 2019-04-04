@@ -12,7 +12,7 @@ void print_structdef_table();
 /* symbol table */
 typedef struct symbol {
     type_t *type;
-    char *name;
+    const char *name;
 } symbol_t;
 
 void init_symbol_table();

@@ -51,8 +51,11 @@ void analyse_var_dec(treenode_t *var_dec, type_t *spec, fieldlist_t *fieldlist,
 
 void semantic_analyse(treenode_t *root)
 {
+    init_structdef_table();
+    init_symbol_table();
     semantic_analyse_r(root);
     print_structdef_table();
+    print_symbol_table();
 }
 
 /* Recursively find ExtDef and begin our analysis. */
