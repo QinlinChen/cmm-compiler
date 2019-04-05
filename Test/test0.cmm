@@ -1,4 +1,4 @@
-int i;
+/* int i;
 
 struct B;
 
@@ -25,4 +25,19 @@ struct E {
     int k = 2;
 } a, b;
 
-struct A x;
+struct A x; */
+
+struct Point {
+    int x, y;
+};
+
+int g(struct Point a, float y);
+
+int f(struct Point a, float y) {
+
+}
+
+int g(struct Point a, int y)
+{
+
+}

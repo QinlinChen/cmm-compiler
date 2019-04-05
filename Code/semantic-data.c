@@ -66,6 +66,7 @@ void init_envstack(envstack_t *envstack);
 void envstack_pushenv(envstack_t *envstack);
 stnode_t *envstack_popenv(envstack_t *envstack);
 void envstack_add(envstack_t *envstack, stnode_t *stnode);
+void envstack_traverse(envstack_t *envstack, void (*handle)(stnode_t *node));
 void print_envstack(envstack_t *envstack);
 
 /* hash table */
@@ -127,9 +128,8 @@ stnode_t *destroy_envnode(envnode_t *envnode)
 void init_envstack(envstack_t *envstack)
 {
     assert(envstack);
-    envnode_t *envnode = create_envnode(NULL);
-    assert(envnode);
-    envstack->top = envnode;
+    envstack->top = NULL;
+    envstack_pushenv(envstack);
 }
 
 void envstack_pushenv(envstack_t *envstack)
@@ -161,14 +161,20 @@ void envstack_add(envstack_t *envstack, stnode_t *stnode)
     top->symbol_head = stnode;
 }
 
+void envstack_traverse(envstack_t *envstack, void (*handle)(stnode_t *node))
+{
+    assert(envstack);
+    for (envnode_t *env = envstack->top; env != NULL; env = env->before)
+        for (stnode_t *node = env->symbol_head; node != NULL; node = node->sibling)
+            handle(node);
+}
+
 void print_envstack(envstack_t *envstack)
 {
     assert(envstack);
-    int i = 0;
     for (envnode_t *env = envstack->top; env != NULL; env = env->before) {
         for (stnode_t *node = env->symbol_head; node != NULL; node = node->sibling) {
-            printf("%s: ",node->symbol.name);
-            print_type(node->symbol.type);
+            print_symbol(&node->symbol);
             printf(";");
             if (node->sibling)
                 printf(" ");
@@ -240,8 +246,7 @@ void print_hashtable(hashtable_t *hashtable)
     assert(hashtable);
     for (int i = 0; i < HT_SIZE; ++i) {
         for (stnode_t *node = hashtable->slots[i]; node != NULL; node = node->next) {
-            printf("%s: ",node->symbol.name);
-            print_type(node->symbol.type);
+            print_symbol(&node->symbol);
             printf(";");
             if (node->next)
                 printf(" ");
@@ -264,6 +269,12 @@ void symbol_set_defined(symbol_t *symbol, int is_defined)
 {
     assert(symbol);
     symbol->is_defined = is_defined;
+}
+
+void print_symbol(symbol_t *symbol)
+{
+    printf("%s: ", symbol->name);
+    print_type(symbol->type);
 }
 
 void init_symbol_table()
@@ -296,14 +307,29 @@ void symbol_table_popenv()
     }
 }
 
-int symbol_table_find_by_name(const char *name, symbol_t *ret)
+int symbol_table_find_by_name(const char *name, symbol_t **ret)
 {
     stnode_t *result = hashtable_find_by_name(&symbol_table.hashtable, name);
     if (!result)
         return -1;  /* failure */
     if (ret)
-        *ret = result->symbol;
+        *ret = &result->symbol;
     return 0;   /* success */
+}
+
+extern void semantic_error(int errtype, int lineno, const char *msg, ...);
+
+void check_undefined_symbol(stnode_t *node)
+{
+    symbol_t *symbol = &node->symbol;
+    if (!symbol->is_defined)
+        semantic_error(18, symbol->lineno, "Undefined function \"%s\"",
+                       symbol->name);
+}
+
+void symbol_table_check_undefined_symbol()
+{
+    envstack_traverse(&symbol_table.envstack, check_undefined_symbol);
 }
 
 void print_symbol_table()

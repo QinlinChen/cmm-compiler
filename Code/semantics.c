@@ -34,34 +34,43 @@ int has_semantic_error()
  *           semantic analyse           *
  * ------------------------------------ */
 
+/* Recursively find ExtDef and begin our analysis. */
 void semantic_analyse_r(treenode_t *node);
 
-/* Analyse ExtDef and add symbols to the symbol table. */
+/* Analyse ExtDef and add symbols(variables/functions) to the symbol table. */
 void analyse_ext_def(treenode_t *ext_def);
+
 /* Analyse Specifier and return the type infomation. */
 type_t *analyse_specifier(treenode_t *specifier);
 /* Analyse StructSpecifier and return the type infomation. */
 type_t *analyse_struct_specifier(treenode_t *struct_specifier);
+
 /* Analyse DefList, Def, DecList, Dec.
  * If it is called during the context of struct field definition,
  * we will append the field to the 'fieldlist'. Otherwise, it must
  * be analysing local definitions and we will add them to the symbol
  * table. In this case, 'fieldlist' can be NULL. */
 enum { CONTEXT_STRUCT_DEF, CONTEXT_VAR_DEF };
-void analyse_def_list(treenode_t *def_list, fieldlist_t *fieldlist, int context);
+void analyse_def_list(treenode_t *def_list, fieldlist_t *ret, int context);
 void analyse_def(treenode_t *def, fieldlist_t *fieldlist, int context);
 void analyse_dec_list(treenode_t *dec_list, type_t *spec,
                       fieldlist_t *fieldlist, int context);
 void analyse_dec(treenode_t *dec, type_t *spec,
                  fieldlist_t *fieldlist, int context);
+
 /* Analyse VarDec and return a symbol with type 'spec'. */
 void analyse_var_dec(treenode_t *var_dec, type_t *spec, symbol_t *ret);
+
 /* Analyse ExtDecList and add global variable to the symbol table. */
 void analyse_ext_dec_list(treenode_t *ext_dec_list, type_t *spec);
-/* Analyse FunDec and add function to the symbol table.
- * It will return the arguments of the function in 'fieldlist' for
- * analysing CompSt use. */
-void analyse_fun_dec(treenode_t *fun_dec, fieldlist_t *ret, int is_def);
+
+/* Analyse FunDec and return a symbol of func type. It will also store
+ * the parameters of the function in 'fieldlist' for analysing CompSt use. */
+void analyse_fun_dec(treenode_t *fun_dec, type_t *spec,
+                     symbol_t *ret_symbol, fieldlist_t *ret_args);
+void analyse_var_list(treenode_t *var_list, fieldlist_t *fieldlist);
+void analyse_param_dec(treenode_t *param_dec, fieldlist_t *fieldlist);
+
 /* Analyse CompSt. If 'args' is not NULL, it will add them to the
  * symbol table on entering the new scope. */
 void analyse_comp_st(treenode_t *comp_st, fieldlist_t *args);
@@ -71,11 +80,11 @@ void semantic_analyse(treenode_t *root)
     init_structdef_table();
     init_symbol_table();
     semantic_analyse_r(root);
+    symbol_table_check_undefined_symbol();
     print_structdef_table();
     print_symbol_table();
 }
 
-/* Recursively find ExtDef and begin our analysis. */
 void semantic_analyse_r(treenode_t *node)
 {
     if (!node)
@@ -99,9 +108,6 @@ void analyse_ext_def(treenode_t *ext_def)
     type_t *spec = analyse_specifier(specifer);
     if (!spec)
         return;
-    printf("get specifier: ");
-    print_type(spec);
-    printf("\n");
 
     treenode_t *child2 = specifer->next;
     assert(child2);
@@ -110,11 +116,37 @@ void analyse_ext_def(treenode_t *ext_def)
         return;
     }
     if (!strcmp(child2->name, "FunDec")) {
-        assert(child2->next);
-        int is_def = !strcmp(child2->next->name, "SEMI") ? 0 : 1;
+        symbol_t func;
         fieldlist_t fieldlist;
         init_fieldlist(&fieldlist);
-        analyse_fun_dec(child2, &fieldlist, is_def);
+        analyse_fun_dec(child2, spec, &func, &fieldlist);
+        assert(child2->next);
+        int is_def = !strcmp(child2->next->name, "SEMI") ? 0 : 1;
+
+        if (structdef_table_find_by_name(func.name)) {
+            semantic_error(3, func.lineno,
+                           "Redefined name \"%s\"", func.name);
+            return;
+        }
+        symbol_t *pfind;
+        if (symbol_table_find_by_name(func.name, &pfind) == 0) {
+            if (pfind->is_defined && is_def) {
+                semantic_error(4, func.lineno,
+                               "Redefined function \"%s\"", func.name);
+                return;
+            }
+            if (!type_is_equal(pfind->type, func.type)) {
+                semantic_error(19, func.lineno,
+                               "Inconsistent declaration of function \"%s\"",
+                               func.name);
+                return;
+            }
+            if (is_def)
+                symbol_set_defined(pfind, 1);
+        } else {
+            symbol_set_defined(&func, is_def);
+            symbol_table_add(&func);
+        }
         if (is_def)
             analyse_comp_st(child2->next, &fieldlist);
         return;
@@ -188,16 +220,16 @@ type_t *analyse_struct_specifier(treenode_t *struct_specifier)
     return (type_t *)structdef;
 }
 
-void analyse_def_list(treenode_t *def_list, fieldlist_t *fieldlist, int context)
+void analyse_def_list(treenode_t *def_list, fieldlist_t *ret, int context)
 {
     assert(def_list);
     assert(!strcmp(def_list->name, "DefList"));
     treenode_t *def = def_list->child;
     assert(def);
 
-    analyse_def(def, fieldlist, context);
+    analyse_def(def, ret, context);
     if (def->next)
-        analyse_def_list(def->next, fieldlist, context);
+        analyse_def_list(def->next, ret, context);
 }
 
 void analyse_def(treenode_t *def, fieldlist_t *fieldlist, int context)
@@ -308,14 +340,60 @@ void analyse_ext_dec_list(treenode_t *ext_dec_list, type_t *spec)
         analyse_ext_dec_list(var_dec->next->next, spec);
 }
 
-void analyse_fun_dec(treenode_t *fun_dec, fieldlist_t *ret, int is_def)
+void analyse_fun_dec(treenode_t *fun_dec, type_t *spec,
+                     symbol_t *ret_symbol, fieldlist_t *ret_args)
 {
     assert(fun_dec);
     assert(!strcmp(fun_dec->name, "FunDec"));
-    // TODO:
+    treenode_t *id = fun_dec->child;
+    assert(id);
+    assert(id->token = ID);
+    assert(id->next);
+    treenode_t *child3 = id->next->next;
+    assert(child3);
+
+    if (!strcmp(child3->name, "VarList"))
+        analyse_var_list(child3, ret_args);
+    else
+        assert(!strcmp(child3->name, "RP"));
+    
+    type_func_t *type_func = create_type_func(spec, NULL);
+    type_func_add_params_from_fieldlist(type_func, ret_args);
+    init_symbol(ret_symbol, (type_t *)type_func, id->id, id->lineno, 0);
+}
+
+void analyse_var_list(treenode_t *var_list, fieldlist_t *fieldlist)
+{
+    assert(var_list);
+    assert(!strcmp(var_list->name, "VarList"));
+    treenode_t *param_dec = var_list->child;
+    assert(param_dec);
+
+    analyse_param_dec(param_dec, fieldlist);
+    if (param_dec->next)
+        analyse_var_list(param_dec->next->next, fieldlist);
+}
+
+void analyse_param_dec(treenode_t *param_dec, fieldlist_t *fieldlist)
+{
+    assert(param_dec);
+    assert(!strcmp(param_dec->name, "ParamDec"));
+    treenode_t *specifier = param_dec->child;
+    assert(specifier);
+    treenode_t *var_dec = specifier->next;
+    
+    type_t *spec = analyse_specifier(specifier);
+    symbol_t symbol;
+    analyse_var_dec(var_dec, spec, &symbol);
+    if (fieldlist_find_type_by_fieldname(fieldlist, symbol.name))
+        semantic_error(15, symbol.lineno, "Redefined field \"%s\"",
+                       symbol.name);
+    else
+        fieldlist_push_back(fieldlist, symbol.name, symbol.type);
 }
 
 void analyse_comp_st(treenode_t *comp_st, fieldlist_t *args)
 {
     // TODO:
+    printf("analyse_comp_st\n");
 }

@@ -11,15 +11,36 @@
  *            abstract type             *
  * ------------------------------------ */
 
+int type_is_equal(type_t *lhs, type_t *rhs)
+{
+    assert(lhs);
+    assert(rhs);
+    if (lhs->kind != rhs->kind)
+        return 0;
+    switch (lhs->kind) {
+    case TYPE_BASIC:
+        return type_basic_is_equal((type_basic_t *)lhs, (type_basic_t *)rhs);
+    case TYPE_ARRAY:
+        return type_array_is_equal((type_array_t *)lhs, (type_array_t *)rhs);
+    case TYPE_STRUCT:
+        return type_struct_is_equal((type_struct_t *)lhs, (type_struct_t *)rhs);
+    case TYPE_FUNC:
+        return type_func_is_equal((type_func_t *)lhs, (type_func_t *)rhs);
+    default:
+        assert(0);
+    }
+    return 0;
+}
+
 void print_type(type_t *type)
 {
     assert(type);
     switch (type->kind) {
-        case TYPE_BASIC: print_type_basic((type_basic_t *)type); break;
-        case TYPE_ARRAY: print_type_array((type_array_t *)type); break;
-        case TYPE_STRUCT: print_type_struct((type_struct_t *)type); break;
-        case TYPE_FUNC: print_type_func((type_func_t *)type); break;
-        default: assert(0); break;
+    case TYPE_BASIC: print_type_basic((type_basic_t *)type); break;
+    case TYPE_ARRAY: print_type_array((type_array_t *)type); break;
+    case TYPE_STRUCT: print_type_struct((type_struct_t *)type); break;
+    case TYPE_FUNC: print_type_func((type_func_t *)type); break;
+    default: assert(0); break;
     }
 }
 
@@ -56,6 +77,13 @@ type_basic_t *create_type_basic(int type_id)
     return tb;
 }
 
+int type_basic_is_equal(type_basic_t *lhs, type_basic_t *rhs)
+{
+    assert(lhs);
+    assert(rhs);
+    return lhs->type_id == rhs->type_id;
+}
+
 void print_type_basic(type_basic_t *tb)
 {
     assert(tb);
@@ -78,6 +106,15 @@ type_array_t *create_type_array(int size, type_t *extend_from)
     ta->size = size;
     ta->extend_from = extend_from;
     return ta;
+}
+
+int type_array_is_equal(type_array_t *lhs, type_array_t *rhs)
+{
+    assert(lhs);
+    assert(rhs);
+    if (lhs->size != rhs->size)
+        return 0;
+    return type_is_equal(lhs->extend_from, rhs->extend_from);
 }
 
 void print_type_array(type_array_t *ta)
@@ -147,6 +184,21 @@ type_t *fieldlist_find_type_by_fieldname(fieldlist_t *fieldlist,
     return NULL;
 }
 
+int fieldlist_is_equal(fieldlist_t *lhs, fieldlist_t *rhs)
+{
+    if (lhs->size != rhs->size)
+        return 0;
+    fieldlistnode_t *lcur = lhs->front, *rcur = rhs->front;
+    while (lcur) {
+        assert(rcur);
+        if (!type_is_equal(lcur->type, rcur->type))
+            return 0;
+        lcur = lcur->next;
+        rcur = rcur->next;
+    }
+    return 1;
+}
+
 void print_fieldlist(fieldlist_t *fieldlist)
 {
     for (fieldlistnode_t *cur = fieldlist->front; cur != NULL; cur = cur->next) {
@@ -174,6 +226,11 @@ type_struct_t *create_type_struct(const char *structname, fieldlist_t *fields)
     if (fields)
         ts->fields = *fields;
     return ts;
+}
+
+int type_struct_is_equal(type_struct_t *lhs, type_struct_t *rhs)
+{
+    return fieldlist_is_equal(&lhs->fields, &rhs->fields);
 }
 
 void print_type_struct(type_struct_t *ts)
@@ -240,6 +297,21 @@ type_struct_t *typelist_find_type_struct_by_name(typelist_t *typelist,
     return NULL;
 }
 
+int typelist_is_equal(typelist_t *lhs, typelist_t *rhs)
+{
+    if (lhs->size != rhs->size)
+        return 0;
+    typelistnode_t *lcur = lhs->front, *rcur = rhs->front;
+    while (lcur) {
+        assert(rcur);
+        if (!type_is_equal(lcur->type, rcur->type))
+            return 0;
+        lcur = lcur->next;
+        rcur = rcur->next;
+    }
+    return 1;
+}
+
 void print_typelist(typelist_t *typelist)
 {
     for (typelistnode_t *cur = typelist->front; cur != NULL; cur = cur->next) {
@@ -253,7 +325,37 @@ void print_typelist(typelist_t *typelist)
  *              func type               *
  * ------------------------------------ */
 
+type_func_t *create_type_func(type_t *ret_type, typelist_t *types)
+{
+    type_func_t *tf = malloc(sizeof(type_func_t));
+    assert(tf);
+    tf->kind = TYPE_FUNC;
+    tf->ret_type = ret_type;
+    init_typelist(&tf->types);
+    if (types)
+        tf->types = *types;
+    return tf;
+}
+
+void type_func_add_params_from_fieldlist(type_func_t *type_func,
+                                         fieldlist_t *fieldlist)
+{
+    for (fieldlistnode_t *cur = fieldlist->front; cur != NULL; cur = cur->next) {
+        assert(cur->type);
+        typelist_push_back(&type_func->types, cur->type);
+    }
+}
+
+int type_func_is_equal(type_func_t *lhs, type_func_t *rhs)
+{
+    return type_is_equal(lhs->ret_type, rhs->ret_type)
+        && typelist_is_equal(&lhs->types, &rhs->types);
+}
+
 void print_type_func(type_func_t *tf)
 {
-    printf("TODO: print_type_func!\n");
+    print_type(tf->ret_type);
+    printf(" (");
+    print_typelist(&tf->types);
+    printf(")");
 }
