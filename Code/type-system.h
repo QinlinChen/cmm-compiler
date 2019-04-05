@@ -59,8 +59,6 @@ typedef struct fieldlist {
 void init_fieldlist(fieldlist_t *fieldlist);
 void fieldlist_push_back(fieldlist_t *fieldlist,
                          const char *fieldname, type_t *type);
-void fieldlist_push_front(fieldlist_t *fieldlist,
-                          const char *fieldname, type_t *type);
 type_t *fieldlist_find_type_by_fieldname(fieldlist_t *fieldlist,
                                          const char *fieldname);
 int fieldlist_is_equal(fieldlist_t *lhs, fieldlist_t *rhs);

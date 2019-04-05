@@ -66,6 +66,7 @@ void init_envstack(envstack_t *envstack);
 void envstack_pushenv(envstack_t *envstack);
 stnode_t *envstack_popenv(envstack_t *envstack);
 void envstack_add(envstack_t *envstack, stnode_t *stnode);
+stnode_t *envstack_find_by_name_in_top(envstack_t *envstack, const char *name);
 void envstack_traverse(envstack_t *envstack, void (*handle)(stnode_t *node));
 void print_envstack(envstack_t *envstack);
 
@@ -159,6 +160,16 @@ void envstack_add(envstack_t *envstack, stnode_t *stnode)
     envnode_t *top = envstack->top;
     stnode->sibling = top->symbol_head;
     top->symbol_head = stnode;
+}
+
+stnode_t *envstack_find_by_name_in_top(envstack_t *envstack, const char *name)
+{
+    assert(envstack);
+    for (stnode_t *node = envstack->top->symbol_head;
+         node != NULL; node = node->sibling)
+        if (!strcmp(node->symbol.name, name))
+            return node;
+    return NULL;
 }
 
 void envstack_traverse(envstack_t *envstack, void (*handle)(stnode_t *node))
@@ -290,6 +301,15 @@ void symbol_table_add(symbol_t *symbol)
     hashtable_add(&symbol_table.hashtable, stnode);
 }
 
+void symbol_table_add_from_fieldlist(fieldlist_t *fieldlist)
+{
+    for (fieldlistnode_t *cur = fieldlist->front; cur != NULL; cur = cur->next) {
+        symbol_t symbol;
+        init_symbol(&symbol, cur->type, cur->fieldname, -1, 1);
+        symbol_table_add(&symbol);
+    }
+}
+
 void symbol_table_pushenv()
 {
     envstack_pushenv(&symbol_table.envstack);
@@ -311,10 +331,20 @@ int symbol_table_find_by_name(const char *name, symbol_t **ret)
 {
     stnode_t *result = hashtable_find_by_name(&symbol_table.hashtable, name);
     if (!result)
-        return -1;  /* failure */
+        return -1;  /* Not found. */
     if (ret)
         *ret = &result->symbol;
     return 0;   /* success */
+}
+
+int symbol_table_find_by_name_in_curenv(const char *name, symbol_t **ret)
+{
+    stnode_t *result = envstack_find_by_name_in_top(&symbol_table.envstack, name);
+    if (!result)
+        return -1;  /* Not found. */
+    if (ret)
+        *ret = &result->symbol;
+    return 0;
 }
 
 extern void semantic_error(int errtype, int lineno, const char *msg, ...);

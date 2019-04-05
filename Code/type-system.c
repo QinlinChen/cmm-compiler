@@ -160,21 +160,6 @@ void fieldlist_push_back(fieldlist_t *fieldlist,
     fieldlist->size++;
 }
 
-void fieldlist_push_front(fieldlist_t *fieldlist,
-                          const char *fieldname, type_t *type)
-{
-    assert(fieldlist);
-    fieldlistnode_t *newnode = create_fieldlistnode(fieldname, type);
-    assert(newnode);
-
-    if (fieldlist->size == 0)
-        fieldlist->back = newnode;
-    else
-        newnode->next = fieldlist->front;
-    fieldlist->front = newnode;
-    fieldlist->size++;
-}
-
 type_t *fieldlist_find_type_by_fieldname(fieldlist_t *fieldlist,
                                          const char *fieldname)
 {

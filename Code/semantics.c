@@ -74,6 +74,14 @@ void analyse_param_dec(treenode_t *param_dec, fieldlist_t *fieldlist);
 /* Analyse CompSt. If 'args' is not NULL, it will add them to the
  * symbol table on entering the new scope. */
 void analyse_comp_st(treenode_t *comp_st, fieldlist_t *args);
+void analyse_stmt_list(treenode_t *stmt_list);
+
+/* Wrapper functions that check semantic error. */
+int checked_structdef_table_add(type_struct_t *structdef, int lineno);
+int checked_fieldlist_push_back(fieldlist_t *fieldlist, symbol_t *symbol);
+int checked_paramlist_push_back(fieldlist_t *paramlist, symbol_t *symbol);
+int checked_symbol_table_add_var(symbol_t *symbol);
+int checked_symbol_table_add_func(symbol_t *func, int is_def);
 
 void semantic_analyse(treenode_t *root)
 {
@@ -81,6 +89,7 @@ void semantic_analyse(treenode_t *root)
     init_symbol_table();
     semantic_analyse_r(root);
     symbol_table_check_undefined_symbol();
+
     print_structdef_table();
     print_symbol_table();
 }
@@ -117,38 +126,16 @@ void analyse_ext_def(treenode_t *ext_def)
     }
     if (!strcmp(child2->name, "FunDec")) {
         symbol_t func;
-        fieldlist_t fieldlist;
-        init_fieldlist(&fieldlist);
-        analyse_fun_dec(child2, spec, &func, &fieldlist);
+        fieldlist_t paramlist;
+        init_fieldlist(&paramlist);
+        analyse_fun_dec(child2, spec, &func, &paramlist);
         assert(child2->next);
         int is_def = !strcmp(child2->next->name, "SEMI") ? 0 : 1;
 
-        if (structdef_table_find_by_name(func.name)) {
-            semantic_error(3, func.lineno,
-                           "Redefined name \"%s\"", func.name);
+        if (checked_symbol_table_add_func(&func, is_def) != 0)
             return;
-        }
-        symbol_t *pfind;
-        if (symbol_table_find_by_name(func.name, &pfind) == 0) {
-            if (pfind->is_defined && is_def) {
-                semantic_error(4, func.lineno,
-                               "Redefined function \"%s\"", func.name);
-                return;
-            }
-            if (!type_is_equal(pfind->type, func.type)) {
-                semantic_error(19, func.lineno,
-                               "Inconsistent declaration of function \"%s\"",
-                               func.name);
-                return;
-            }
-            if (is_def)
-                symbol_set_defined(pfind, 1);
-        } else {
-            symbol_set_defined(&func, is_def);
-            symbol_table_add(&func);
-        }
         if (is_def)
-            analyse_comp_st(child2->next, &fieldlist);
+            analyse_comp_st(child2->next, &paramlist);
         return;
     }
     assert(!strcmp(child2->name, "SEMI"));
@@ -190,11 +177,7 @@ type_t *analyse_struct_specifier(treenode_t *struct_specifier)
         if (strcmp(child2->next->next->name, "RC"))
             analyse_def_list(child2->next->next, &fieldlist, CONTEXT_STRUCT_DEF);
         structdef = create_type_struct(id->id, &fieldlist);
-        if (structdef_table_find_by_name(id->id)) {
-            semantic_error(16, id->lineno, "Duplicated name \"%s\"", id->id);
-            return NULL;
-        }
-        structdef_table_add(structdef);
+        checked_structdef_table_add(structdef, id->lineno);
         return (type_t *)structdef;
     }
     if (!strcmp(child2->name, "Tag")) {
@@ -268,19 +251,12 @@ void analyse_dec(treenode_t *dec, type_t *spec,
 
     symbol_t symbol;
     analyse_var_dec(var_dec, spec, &symbol);
-    if (context == CONTEXT_STRUCT_DEF) {
-        if (fieldlist_find_type_by_fieldname(fieldlist, symbol.name))
-            semantic_error(15, symbol.lineno, "Redefined field \"%s\"",
-                           symbol.name);
-        else
-            fieldlist_push_back(fieldlist, symbol.name, symbol.type);
-    }
-    else if (context == CONTEXT_VAR_DEF) {
-        // TODO: Do something in the future;
-    }
-    else {
+    if (context == CONTEXT_STRUCT_DEF)
+        checked_fieldlist_push_back(fieldlist, &symbol);
+    else if (context == CONTEXT_VAR_DEF)
+        checked_symbol_table_add_var(&symbol);
+    else
         assert(0); /* Should not reach here. */
-    }
 
     treenode_t *assignop = var_dec->next;
     if (assignop) {
@@ -327,21 +303,14 @@ void analyse_ext_dec_list(treenode_t *ext_dec_list, type_t *spec)
 
     symbol_t symbol;
     analyse_var_dec(var_dec, spec, &symbol);
-    if (symbol_table_find_by_name(symbol.name, NULL) == 0
-        || structdef_table_find_by_name(symbol.name))
-        semantic_error(3, symbol.lineno, "Redefined variable \"%s\"",
-                       symbol.name);
-    else {
-        symbol_set_defined(&symbol, 1);
-        symbol_table_add(&symbol);
-    }
+    checked_symbol_table_add_var(&symbol);
 
     if (var_dec->next)
         analyse_ext_dec_list(var_dec->next->next, spec);
 }
 
 void analyse_fun_dec(treenode_t *fun_dec, type_t *spec,
-                     symbol_t *ret_symbol, fieldlist_t *ret_args)
+                     symbol_t *ret_symbol, fieldlist_t *ret_params)
 {
     assert(fun_dec);
     assert(!strcmp(fun_dec->name, "FunDec"));
@@ -353,47 +322,147 @@ void analyse_fun_dec(treenode_t *fun_dec, type_t *spec,
     assert(child3);
 
     if (!strcmp(child3->name, "VarList"))
-        analyse_var_list(child3, ret_args);
+        analyse_var_list(child3, ret_params);
     else
         assert(!strcmp(child3->name, "RP"));
-    
+
     type_func_t *type_func = create_type_func(spec, NULL);
-    type_func_add_params_from_fieldlist(type_func, ret_args);
+    type_func_add_params_from_fieldlist(type_func, ret_params);
     init_symbol(ret_symbol, (type_t *)type_func, id->id, id->lineno, 0);
 }
 
-void analyse_var_list(treenode_t *var_list, fieldlist_t *fieldlist)
+void analyse_var_list(treenode_t *var_list, fieldlist_t *paramlist)
 {
     assert(var_list);
     assert(!strcmp(var_list->name, "VarList"));
     treenode_t *param_dec = var_list->child;
     assert(param_dec);
 
-    analyse_param_dec(param_dec, fieldlist);
+    analyse_param_dec(param_dec, paramlist);
     if (param_dec->next)
-        analyse_var_list(param_dec->next->next, fieldlist);
+        analyse_var_list(param_dec->next->next, paramlist);
 }
 
-void analyse_param_dec(treenode_t *param_dec, fieldlist_t *fieldlist)
+void analyse_param_dec(treenode_t *param_dec, fieldlist_t *paramlist)
 {
     assert(param_dec);
     assert(!strcmp(param_dec->name, "ParamDec"));
     treenode_t *specifier = param_dec->child;
     assert(specifier);
     treenode_t *var_dec = specifier->next;
-    
+
     type_t *spec = analyse_specifier(specifier);
     symbol_t symbol;
     analyse_var_dec(var_dec, spec, &symbol);
-    if (fieldlist_find_type_by_fieldname(fieldlist, symbol.name))
-        semantic_error(15, symbol.lineno, "Redefined field \"%s\"",
-                       symbol.name);
-    else
-        fieldlist_push_back(fieldlist, symbol.name, symbol.type);
+    checked_paramlist_push_back(paramlist, &symbol);
 }
 
-void analyse_comp_st(treenode_t *comp_st, fieldlist_t *args)
+void analyse_comp_st(treenode_t *comp_st, fieldlist_t *params)
 {
-    // TODO:
-    printf("analyse_comp_st\n");
+    assert(comp_st);
+    assert(!strcmp(comp_st->name, "CompSt"));
+    assert(comp_st->child);
+    symbol_table_pushenv();
+    if (params)
+        symbol_table_add_from_fieldlist(params);
+
+    treenode_t *child2 = comp_st->child->next;
+    assert(child2);
+
+    if (!strcmp(child2->name, "DefList")) {
+        analyse_def_list(child2, NULL, CONTEXT_VAR_DEF);
+    }
+    else if (!strcmp(child2->name, "StmtList")) {
+        analyse_stmt_list(child2);
+    }
+    else {
+        assert(!strcmp(child2->name, "RC"));
+    }
+
+    symbol_table_popenv();  /* Remember to pop environment! */
+}
+
+void analyse_stmt_list(treenode_t *stmt_list)
+{
+    assert(stmt_list);
+    assert(!strcmp(stmt_list->name, "StmtList"));
+    printf("analyse_stmt_list");
+}
+
+int checked_structdef_table_add(type_struct_t *structdef, int lineno)
+{
+    if (structdef_table_find_by_name(structdef->structname)) {
+        semantic_error(16, lineno, "Duplicated name \"%s\"",
+                       structdef->structname);
+        return -1;
+    }
+    structdef_table_add(structdef);
+    return 0;
+}
+
+int checked_fieldlist_push_back(fieldlist_t *fieldlist, symbol_t *symbol)
+{
+    if (fieldlist_find_type_by_fieldname(fieldlist, symbol->name)) {
+        semantic_error(15, symbol->lineno, "Redefined field \"%s\"",
+                       symbol->name);
+        return -1;
+    }
+    fieldlist_push_back(fieldlist, symbol->name, symbol->type);
+    return 0;
+}
+
+int checked_paramlist_push_back(fieldlist_t *paramlist, symbol_t *symbol)
+{
+    if (fieldlist_find_type_by_fieldname(paramlist, symbol->name)) {
+        semantic_error(15, symbol->lineno, "Redefined parameter \"%s\"",
+                       symbol->name);
+        return -1;
+    }
+    fieldlist_push_back(paramlist, symbol->name, symbol->type);
+    return 0;
+}
+
+int checked_symbol_table_add_var(symbol_t *symbol)
+{
+    assert(symbol->type->kind != TYPE_FUNC);
+    if (symbol_table_find_by_name_in_curenv(symbol->name, NULL) == 0
+        || structdef_table_find_by_name(symbol->name)) {
+        semantic_error(3, symbol->lineno, "Redefined variable \"%s\"",
+                       symbol->name);
+        return -1;
+    }
+    symbol_set_defined(symbol, 1);
+    symbol_table_add(symbol);
+    return 0;
+}
+
+int checked_symbol_table_add_func(symbol_t *func, int is_def)
+{
+    assert(func->type->kind == TYPE_FUNC);
+    if (structdef_table_find_by_name(func->name)) {
+        semantic_error(3, func->lineno,
+                       "Redefined name \"%s\"", func->name);
+        return -1;
+    }
+    symbol_t *pfind;
+    if (symbol_table_find_by_name_in_curenv(func->name, &pfind) == 0) {
+        if (pfind->is_defined && is_def) {
+            semantic_error(4, func->lineno,
+                           "Redefined function \"%s\"", func->name);
+            return -1;
+        }
+        if (!type_is_equal(pfind->type, func->type)) {
+            semantic_error(19, func->lineno,
+                           "Inconsistent declaration of function \"%s\"",
+                           func->name);
+            return -1;
+        }
+        if (is_def)
+            symbol_set_defined(pfind, 1);
+    }
+    else {
+        symbol_set_defined(func, is_def);
+        symbol_table_add(func);
+    }
+    return 0;
 }

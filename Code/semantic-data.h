@@ -24,9 +24,11 @@ void print_symbol(symbol_t *symbol);
 
 void init_symbol_table();
 void symbol_table_add(symbol_t *symbol);
+void symbol_table_add_from_fieldlist(fieldlist_t *fieldlist);
 void symbol_table_pushenv();
 void symbol_table_popenv();
 int symbol_table_find_by_name(const char *name, symbol_t **ret);
+int symbol_table_find_by_name_in_curenv(const char *name, symbol_t **ret);
 void symbol_table_check_undefined_symbol();
 void print_symbol_table();
 

@@ -31,10 +31,13 @@ struct Point {
     int x, y;
 };
 
+int i;
+
 int g(struct Point a, float y);
 
 int f(struct Point a, float y) {
-
+    int i, j;
+    int i;
 }
 
 int g(struct Point a, int y)
