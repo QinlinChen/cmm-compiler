@@ -40,5 +40,6 @@ void add_child5(treenode_t *parent, treenode_t *c1, treenode_t *c2,
                 treenode_t *c3, treenode_t *c4, treenode_t *c5);
 
 void print_tree(treenode_t *root);
+const char *treenode_repr(treenode_t *node);
 
 #endif

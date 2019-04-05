@@ -117,6 +117,12 @@ int type_array_is_equal(type_array_t *lhs, type_array_t *rhs)
     return type_is_equal(lhs->extend_from, rhs->extend_from);
 }
 
+type_t *type_array_access(type_array_t *ta)
+{
+    assert(ta);
+    return ta->extend_from;
+}
+
 void print_type_array(type_array_t *ta)
 {
     assert(ta);
@@ -176,6 +182,8 @@ int fieldlist_is_equal(fieldlist_t *lhs, fieldlist_t *rhs)
     fieldlistnode_t *lcur = lhs->front, *rcur = rhs->front;
     while (lcur) {
         assert(rcur);
+        if (!lcur->type || !rcur->type)
+            return 0;
         if (!type_is_equal(lcur->type, rcur->type))
             return 0;
         lcur = lcur->next;
@@ -216,6 +224,11 @@ type_struct_t *create_type_struct(const char *structname, fieldlist_t *fields)
 int type_struct_is_equal(type_struct_t *lhs, type_struct_t *rhs)
 {
     return fieldlist_is_equal(&lhs->fields, &rhs->fields);
+}
+
+type_t *type_struct_access(type_struct_t *ts, const char *fieldname)
+{
+    return fieldlist_find_type_by_fieldname(&ts->fields, fieldname);
 }
 
 void print_type_struct(type_struct_t *ts)
@@ -289,6 +302,8 @@ int typelist_is_equal(typelist_t *lhs, typelist_t *rhs)
     typelistnode_t *lcur = lhs->front, *rcur = rhs->front;
     while (lcur) {
         assert(rcur);
+        if (!lcur->type || !rcur->type)
+            return 0;
         if (!type_is_equal(lcur->type, rcur->type))
             return 0;
         lcur = lcur->next;

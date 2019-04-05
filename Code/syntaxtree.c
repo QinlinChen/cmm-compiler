@@ -127,11 +127,6 @@ void add_child5(treenode_t *parent, treenode_t *c1, treenode_t *c2,
     add_children(parent, children, 5);
 }
 
-void print_tree(treenode_t *root)
-{
-    print_tree_r(root, 0);
-}
-
 void print_tree_r(treenode_t *root, int depth)
 {
     if (!root)
@@ -154,7 +149,55 @@ void print_tree_r(treenode_t *root, int depth)
     }
     printf("\n");
 
-    for (treenode_t *child = root->child; child != NULL; child = child->next) {
+    for (treenode_t *child = root->child; child != NULL; child = child->next)
         print_tree_r(child, depth + 1);
+}
+
+void print_tree(treenode_t *root)
+{
+    print_tree_r(root, 0);
+}
+
+void treenode_repr_r(char *buf, treenode_t *node)
+{
+    if (!node)
+        return;
+
+    if (node->is_term) {
+        switch (node->token) {
+        case ID: sprintf(buf, "%s%s", buf, node->id); break;
+        case INT: sprintf(buf, "%s%d", buf, node->ival); break;
+        case FLOAT: sprintf(buf, "%s%f", buf, node->fval); break;
+        case TYPE: sprintf(buf, "%s%s", buf, typeid_to_name(node->type_id)); break;
+        case ASSIGNOP: strcat(buf, "="); break;
+        case PLUS: strcat(buf, "+"); break;
+        case MINUS: strcat(buf, "-"); break;
+        case STAR: strcat(buf, "*"); break;
+        case DIV: strcat(buf, "/"); break;
+        case AND: strcat(buf, "&&"); break;
+        case OR: strcat(buf, "||"); break;
+        case DOT: strcat(buf, "."); break;
+        case NOT: strcat(buf, "!"); break;
+        case LP: strcat(buf, "("); break;
+        case RP: strcat(buf, ")"); break;
+        case LB: strcat(buf, "["); break;
+        case RB: strcat(buf, "]"); break;
+        case LC: strcat(buf, "{"); break;
+        case RC: strcat(buf, "}"); break;
+        case COMMA: strcat(buf, ","); break;
+        case SEMI: strcat(buf, ";"); break;
+        default: strcat(buf, node->name); break;
+        }
     }
+
+    for (treenode_t *child = node->child; child != NULL; child = child->next)
+        treenode_repr_r(buf, child);
+}
+
+const char *treenode_repr(treenode_t *node)
+{
+    static char buf[1024];
+    buf[0] = '\0';
+    treenode_repr_r(buf, node);
+    return buf;
 }

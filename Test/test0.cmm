@@ -27,20 +27,54 @@ struct E {
 
 struct A x; */
 
-struct Point {
-    int x, y;
+int func(int i);
+
+struct Position {
+    float x, y;
 };
 
-int i;
-
-int g(struct Point a, float y);
-
-int f(struct Point a, float y) {
-    int i, j;
-    int i;
+int func(int i) {
+    return i;
 }
 
-int g(struct Point a, int y)
-{
+int func(struct Position p);
 
+int g();
+
+struct Temp1
+{
+    int i;
+    float j;
+};
+
+struct Temp2
+{
+    int x;
+    float y;
+};
+
+
+int main()
+{
+    int i = 0;
+    int i;
+    float f;
+    int a[10];
+    struct Position p;
+    struct Temp1 t1;
+    struct Temp2 t2;
+
+    j = i + 1;
+    inc(i);
+    i = 3.7;
+    10 = i;
+    10 + f;
+    func(1,2);
+    i[0];
+    i(10);
+    a[1.5] = 10;
+    i.x;
+    p.n = p.x;
+    i = g();
+    t1 = t2;
 }

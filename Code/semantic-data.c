@@ -353,7 +353,7 @@ void check_undefined_symbol(stnode_t *node)
 {
     symbol_t *symbol = &node->symbol;
     if (!symbol->is_defined)
-        semantic_error(18, symbol->lineno, "Undefined function \"%s\"",
+        semantic_error(18, symbol->lineno, "Undefined function \"%s\".",
                        symbol->name);
 }
 

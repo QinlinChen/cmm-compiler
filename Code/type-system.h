@@ -39,6 +39,7 @@ typedef struct type_array {
 
 type_array_t *create_type_array(int size, type_t *extend_from);
 int type_array_is_equal(type_array_t *lhs, type_array_t *rhs);
+type_t *type_array_access(type_array_t *ta);
 void print_type_array(type_array_t *ta);
 
 /* fieldlist */
@@ -72,6 +73,7 @@ typedef struct type_struct {
 
 type_struct_t *create_type_struct(const char *structname, fieldlist_t *fields);
 int type_struct_is_equal(type_struct_t *lhs, type_struct_t *rhs);
+type_t *type_struct_access(type_struct_t *ts, const char *fieldname);
 void print_type_struct(type_struct_t *ts);
 
 /* typelist */
