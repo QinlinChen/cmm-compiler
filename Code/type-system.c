@@ -101,7 +101,7 @@ fieldlistnode_t *create_fieldlistnode(const char *fieldname, type_t *type)
 {
     fieldlistnode_t *newnode = malloc(sizeof(fieldlistnode_t));
     if (newnode){
-        newnode->fieldname = strdup(fieldname);
+        newnode->fieldname = fieldname;
         newnode->type = type;
         newnode->next = NULL;
     }
@@ -170,7 +170,7 @@ type_struct_t *create_type_struct(const char *structname, fieldlist_t *fields)
     ts->structname = NULL;
     init_fieldlist(&ts->fields);
     if (structname)
-        ts->structname = strdup(structname);
+        ts->structname = structname;
     if (fields)
         ts->fields = *fields;
     return ts;

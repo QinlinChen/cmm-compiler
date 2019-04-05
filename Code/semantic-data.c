@@ -260,6 +260,12 @@ void init_symbol(symbol_t *symbol, type_t *type, const char *name,
     symbol->is_defined = is_defined;
 }
 
+void symbol_set_defined(symbol_t *symbol, int is_defined)
+{
+    assert(symbol);
+    symbol->is_defined = is_defined;
+}
+
 void init_symbol_table()
 {
     init_envstack(&symbol_table.envstack);

@@ -40,7 +40,7 @@ void print_type_array(type_array_t *ta);
 
 /* fieldlist */
 typedef struct fieldlistnode {
-    char *fieldname;
+    const char *fieldname;
     type_t *type;
     struct fieldlistnode *next;
 } fieldlistnode_t;
@@ -64,7 +64,7 @@ type_t *fieldlist_find_type_by_fieldname(fieldlist_t *fieldlist,
 /* struct type: T := struct_name { T fieldname; ...; } */
 typedef struct type_struct {
     int kind;
-    char *structname;
+    const char *structname;
     fieldlist_t fields;
 } type_struct_t;
 

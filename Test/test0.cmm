@@ -25,4 +25,4 @@ struct E {
     int k = 2;
 } a, b;
 
-struct A c;
+struct A x;

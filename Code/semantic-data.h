@@ -19,6 +19,8 @@ typedef struct symbol {
 
 void init_symbol(symbol_t *symbol, type_t *type, const char *name,
                  int lineno, int is_defined);
+void symbol_set_defined(symbol_t *symbol, int is_defined);
+
 void init_symbol_table();
 void symbol_table_add(symbol_t *symbol);
 void symbol_table_pushenv();

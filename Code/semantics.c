@@ -42,26 +42,26 @@ void analyse_ext_def(treenode_t *ext_def);
 type_t *analyse_specifier(treenode_t *specifier);
 /* Analyse StructSpecifier and return the type infomation. */
 type_t *analyse_struct_specifier(treenode_t *struct_specifier);
-/* Analyse DefList, Def, DecList, Dec, VarDec.
- * If it is called during the struct field definition, we will
- * append the field to the 'fieldlist'. Otherwise, it must be
- * analysing local variable definitions and we will add them to
- * the symbol table. In this case, 'fieldlist' can be NULL. */
-void analyse_def_list(treenode_t *def_list, fieldlist_t *fieldlist,
-                      int is_during_structdef);
-void analyse_def(treenode_t *def, fieldlist_t *fieldlist, int is_during_structdef);
-void analyse_dec_list(treenode_t *dec_list, type_t *spec, fieldlist_t *fieldlist,
-                      int is_during_structdef);
-void analyse_dec(treenode_t *dec, type_t *spec, fieldlist_t *fieldlist,
-                 int is_during_structdef);
-void analyse_var_dec(treenode_t *var_dec, type_t *spec, fieldlist_t *fieldlist,
-                     int is_during_structdef);
+/* Analyse DefList, Def, DecList, Dec.
+ * If it is called during the context of struct field definition,
+ * we will append the field to the 'fieldlist'. Otherwise, it must
+ * be analysing local definitions and we will add them to the symbol
+ * table. In this case, 'fieldlist' can be NULL. */
+enum { CONTEXT_STRUCT_DEF, CONTEXT_VAR_DEF };
+void analyse_def_list(treenode_t *def_list, fieldlist_t *fieldlist, int context);
+void analyse_def(treenode_t *def, fieldlist_t *fieldlist, int context);
+void analyse_dec_list(treenode_t *dec_list, type_t *spec,
+                      fieldlist_t *fieldlist, int context);
+void analyse_dec(treenode_t *dec, type_t *spec,
+                 fieldlist_t *fieldlist, int context);
+/* Analyse VarDec and return a symbol with type 'spec'. */
+void analyse_var_dec(treenode_t *var_dec, type_t *spec, symbol_t *ret);
 /* Analyse ExtDecList and add global variable to the symbol table. */
 void analyse_ext_dec_list(treenode_t *ext_dec_list, type_t *spec);
 /* Analyse FunDec and add function to the symbol table.
  * It will return the arguments of the function in 'fieldlist' for
  * analysing CompSt use. */
-void analyse_fun_dec(treenode_t *fun_dec, fieldlist_t *fieldlist, int is_def);
+void analyse_fun_dec(treenode_t *fun_dec, fieldlist_t *ret, int is_def);
 /* Analyse CompSt. If 'args' is not NULL, it will add them to the
  * symbol table on entering the new scope. */
 void analyse_comp_st(treenode_t *comp_st, fieldlist_t *args);
@@ -156,8 +156,7 @@ type_t *analyse_struct_specifier(treenode_t *struct_specifier)
         fieldlist_t fieldlist;
         init_fieldlist(&fieldlist);
         if (strcmp(child2->next->next->name, "RC"))
-            analyse_def_list(child2->next->next, &fieldlist,
-                             /* is_during_structdef */ 1);
+            analyse_def_list(child2->next->next, &fieldlist, CONTEXT_STRUCT_DEF);
         structdef = create_type_struct(id->id, &fieldlist);
         if (structdef_table_find_by_name(id->id)) {
             semantic_error(16, id->lineno, "Duplicated name \"%s\"", id->id);
@@ -183,28 +182,25 @@ type_t *analyse_struct_specifier(treenode_t *struct_specifier)
     fieldlist_t fieldlist;
     init_fieldlist(&fieldlist);
     if (strcmp(child2->next->name, "RC"))
-        analyse_def_list(child2->next, &fieldlist,
-                         /* is_during_structdef */ 1);
+        analyse_def_list(child2->next, &fieldlist, CONTEXT_STRUCT_DEF);
     structdef = create_type_struct(NULL, &fieldlist);
     structdef_table_add(structdef);
     return (type_t *)structdef;
 }
 
-void analyse_def_list(treenode_t *def_list, fieldlist_t *fieldlist,
-                      int is_during_structdef)
+void analyse_def_list(treenode_t *def_list, fieldlist_t *fieldlist, int context)
 {
     assert(def_list);
     assert(!strcmp(def_list->name, "DefList"));
     treenode_t *def = def_list->child;
     assert(def);
 
-    analyse_def(def, fieldlist, is_during_structdef);
+    analyse_def(def, fieldlist, context);
     if (def->next)
-        analyse_def_list(def->next, fieldlist, is_during_structdef);
+        analyse_def_list(def->next, fieldlist, context);
 }
 
-void analyse_def(treenode_t *def, fieldlist_t *fieldlist,
-                 int is_during_structdef)
+void analyse_def(treenode_t *def, fieldlist_t *fieldlist, int context)
 {
     assert(def);
     assert(!strcmp(def->name, "Def"));
@@ -214,46 +210,63 @@ void analyse_def(treenode_t *def, fieldlist_t *fieldlist,
     type_t *spec = analyse_specifier(specifier);
     if (!spec)
         return;
-    analyse_dec_list(specifier->next, spec, fieldlist, is_during_structdef);
+    analyse_dec_list(specifier->next, spec, fieldlist, context);
 }
 
-void analyse_dec_list(treenode_t *dec_list, type_t *spec, fieldlist_t *fieldlist,
-                      int is_during_structdef)
+void analyse_dec_list(treenode_t *dec_list, type_t *spec,
+                      fieldlist_t *fieldlist, int context)
 {
     assert(dec_list);
     assert(!strcmp(dec_list->name, "DecList"));
     treenode_t *dec = dec_list->child;
     assert(dec);
 
-    analyse_dec(dec, spec, fieldlist, is_during_structdef);
+    analyse_dec(dec, spec, fieldlist, context);
     if (dec->next)
-        analyse_dec_list(dec->next->next, spec, fieldlist, is_during_structdef);
+        analyse_dec_list(dec->next->next, spec, fieldlist, context);
 }
 
-void analyse_dec(treenode_t *dec, type_t *spec, fieldlist_t *fieldlist,
-                 int is_during_structdef)
+void analyse_dec(treenode_t *dec, type_t *spec,
+                 fieldlist_t *fieldlist, int context)
 {
     assert(dec);
     assert(!strcmp(dec->name, "Dec"));
     treenode_t *var_dec = dec->child;
     assert(var_dec);
-    analyse_var_dec(var_dec, spec, fieldlist, is_during_structdef);
+
+    symbol_t symbol;
+    analyse_var_dec(var_dec, spec, &symbol);
+    if (context == CONTEXT_STRUCT_DEF) {
+        if (fieldlist_find_type_by_fieldname(fieldlist, symbol.name))
+            semantic_error(15, symbol.lineno, "Redefined field \"%s\"",
+                           symbol.name);
+        else
+            fieldlist_push_back(fieldlist, symbol.name, symbol.type);
+    }
+    else if (context == CONTEXT_VAR_DEF) {
+        // TODO: Do something in the future;
+    }
+    else {
+        assert(0); /* Should not reach here. */
+    }
 
     treenode_t *assignop = var_dec->next;
     if (assignop) {
         assert(!strcmp(assignop->name, "ASSIGNOP"));
-        if (is_during_structdef) {
+        if (context == CONTEXT_STRUCT_DEF) {
             semantic_error(15, assignop->lineno,
                            "Field assigned during definition");
         }
+        else if (context == CONTEXT_VAR_DEF) {
+            // TODO: Do something in the future;
+        }
         else {
-            /* TODO: Do something in the future. */
+            assert(0); /* Should not reach here. */
         }
     }
 }
 
-void analyse_var_dec(treenode_t *var_dec, type_t *spec, fieldlist_t *fieldlist,
-                     int is_during_structdef)
+void analyse_var_dec(treenode_t *var_dec, type_t *spec, symbol_t *ret)
 {
     assert(var_dec);
     assert(!strcmp(var_dec->name, "VarDec"));
@@ -262,24 +275,7 @@ void analyse_var_dec(treenode_t *var_dec, type_t *spec, fieldlist_t *fieldlist,
 
     if (!strcmp(child->name, "ID")) {
         assert(child->id);
-        if (is_during_structdef) {
-            if (fieldlist_find_type_by_fieldname(fieldlist, child->id))
-                semantic_error(15, child->lineno, "Redefined field \"%s\"",
-                               child->id);
-            else
-                fieldlist_push_back(fieldlist, child->id, spec);
-        }
-        else {
-            if (symbol_table_find_by_name(child->id, NULL) == 0
-                || structdef_table_find_by_name(child->id))
-                semantic_error(3, child->lineno, "Redefined variable \"%s\"",
-                               child->id);
-            else {
-                symbol_t symbol;
-                init_symbol(&symbol, spec, child->id, child->lineno, 1);
-                symbol_table_add(&symbol);
-            }
-        }
+        init_symbol(ret, spec, child->id, child->lineno, 0);
         return;
     }
     assert(child->next);
@@ -287,7 +283,7 @@ void analyse_var_dec(treenode_t *var_dec, type_t *spec, fieldlist_t *fieldlist,
     assert(intnode);
     assert(intnode->token == INT);
     type_array_t *type_array = create_type_array(intnode->ival, spec);
-    analyse_var_dec(child, (type_t *)type_array, fieldlist, is_during_structdef);
+    analyse_var_dec(child, (type_t *)type_array, ret);
 }
 
 void analyse_ext_dec_list(treenode_t *ext_dec_list, type_t *spec)
@@ -297,15 +293,26 @@ void analyse_ext_dec_list(treenode_t *ext_dec_list, type_t *spec)
     treenode_t *var_dec = ext_dec_list->child;
     assert(var_dec);
 
-    analyse_var_dec(var_dec, spec, NULL, /* is_during_structdef */ 0);
+    symbol_t symbol;
+    analyse_var_dec(var_dec, spec, &symbol);
+    if (symbol_table_find_by_name(symbol.name, NULL) == 0
+        || structdef_table_find_by_name(symbol.name))
+        semantic_error(3, symbol.lineno, "Redefined variable \"%s\"",
+                       symbol.name);
+    else {
+        symbol_set_defined(&symbol, 1);
+        symbol_table_add(&symbol);
+    }
+
     if (var_dec->next)
         analyse_ext_dec_list(var_dec->next->next, spec);
 }
 
-void analyse_fun_dec(treenode_t *fun_dec, fieldlist_t *fieldlist, int is_def)
+void analyse_fun_dec(treenode_t *fun_dec, fieldlist_t *ret, int is_def)
 {
     assert(fun_dec);
     assert(!strcmp(fun_dec->name, "FunDec"));
+    // TODO:
 }
 
 void analyse_comp_st(treenode_t *comp_st, fieldlist_t *args)
