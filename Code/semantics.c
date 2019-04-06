@@ -67,13 +67,13 @@ void analyse_ext_dec_list(treenode_t *ext_dec_list, type_t *spec);
 /* Analyse FunDec and return a symbol of func type. It will also store
  * the parameters of the function in 'fieldlist' for analysing CompSt use. */
 void analyse_fun_dec(treenode_t *fun_dec, type_t *spec,
-                     symbol_t *ret_symbol, fieldlist_t *ret_args);
+                     symbol_t *ret_symbol, fieldlist_t *ret_params);
 void analyse_var_list(treenode_t *var_list, fieldlist_t *fieldlist);
 void analyse_param_dec(treenode_t *param_dec, fieldlist_t *fieldlist);
 
-/* Analyse CompSt. If 'args' is not NULL, it will add them to the
+/* Analyse CompSt. If 'params' is not NULL, it will add them to the
  * symbol table on entering the new scope. */
-void analyse_comp_st(treenode_t *comp_st, type_t *ret_sepc, fieldlist_t *args);
+void analyse_comp_st(treenode_t *comp_st, type_t *ret_sepc, fieldlist_t *params);
 void analyse_stmt_list(treenode_t *stmt_list, type_t *ret_sepc);
 void analyse_stmt(treenode_t *stmt, type_t *ret_sepc);
 
@@ -278,7 +278,7 @@ void analyse_dec(treenode_t *dec, type_t *spec,
     else if (context == CONTEXT_VAR_DEF)
         checked_symbol_table_add_var(&symbol);
     else
-        assert(0); /* Should not reach here. */
+        assert(0); /* Should not reach here! */
 
     treenode_t *assignop = var_dec->next;
     if (assignop) {
@@ -288,10 +288,16 @@ void analyse_dec(treenode_t *dec, type_t *spec,
                            "Field assigned during definition.");
         }
         else if (context == CONTEXT_VAR_DEF) {
-            // TODO: Do something in the future;
+            /* Create a temporory tree to fit the interface of 'typecheck_assign' */
+            treenode_t *temp_exp = create_nontermnode("Exp", symbol.lineno);
+            treenode_t *temp_id = create_idnode(symbol.lineno, symbol.name);
+            add_child(temp_exp, temp_id);
+            typecheck_assign(temp_exp, assignop->next, NULL);
+            destroy_treenode(temp_id);
+            destroy_treenode(temp_exp);
         }
         else {
-            assert(0); /* Should not reach here. */
+            assert(0); /* Should not reach here! */
         }
     }
 }
@@ -396,6 +402,8 @@ void analyse_comp_st(treenode_t *comp_st, type_t *ret_sepc, fieldlist_t *params)
         treenode_t *child3 = child2->next;
         if (!strcmp(child3->name, "StmtList"))
             analyse_stmt_list(child3, ret_sepc);
+        else
+            assert(!strcmp(child3->name, "RC"));
     }
     else if (!strcmp(child2->name, "StmtList")) {
         analyse_stmt_list(child2, ret_sepc);
@@ -432,11 +440,31 @@ void analyse_stmt(treenode_t *stmt, type_t *ret_sepc)
             printf("Exp:\n");
             print_type(t);
             printf("\n");
-        }
-        return;
+        }   // FIXME: delete
     }
-    printf("analyse_other_stmt\n");
-    // TODO;
+    else if (!strcmp(child->name, "CompSt")) {
+        analyse_comp_st(child, ret_sepc, NULL);
+    }
+    else if (!strcmp(child->name, "RETURN")) {
+        assert(child->next);
+        type_t *ret_type = typecheck_exp(child->next, NULL);
+        if (ret_type && !type_is_equal(ret_sepc, ret_type)) {
+            semantic_error(8, child->next->lineno,
+                           "Type mismatched for return.");
+            return;
+        }
+    }
+    else {
+        assert(!strcmp(child->name, "IF") || !strcmp(child->name, "WHILE"));
+        treenode_t *exp = child->next->next;
+        type_t *exptype = typecheck_exp(exp, NULL);
+        if (exptype && !type_is_int(exptype))
+            semantic_error(0, exp->lineno, "Expression conflicts assumption 2.");
+        treenode_t *stmt = exp->next->next;
+        analyse_stmt(stmt, ret_sepc);
+        if (child->token = IF && stmt->next)
+            analyse_stmt(stmt->next->next, ret_sepc);
+    }
 }
 
 type_t *typecheck_exp(treenode_t *exp, int *is_lval)
@@ -483,7 +511,7 @@ type_t *typecheck_exp(treenode_t *exp, int *is_lval)
     if (!strcmp(child2->name, "PLUS") || !strcmp(child2->name, "MINUS") ||
         !strcmp(child2->name, "STAR") || !strcmp(child2->name, "DIV"))
         return typecheck_binary_op(child, child3, OP_BINARY_ARITH, is_lval);
-    assert(0);  /* Should not reach here */
+    assert(0);  /* Should not reach here! */
     return NULL;
 }
 
@@ -561,8 +589,7 @@ type_t *typecheck_array_access(treenode_t *exp, treenode_t *idxexp, int *is_lval
     type_t *idxexptype = typecheck_exp(idxexp, NULL);
     if (!idxexptype)
         return NULL;
-    if (idxexptype->kind != TYPE_BASIC ||
-        ((type_basic_t *)idxexptype)->type_id != INT) {
+    if (!type_is_int(idxexptype)) {
         semantic_error(12, idxexp->lineno, "\"%s\" is not an integer.",
                        treenode_repr(idxexp));
         return NULL;
@@ -654,8 +681,7 @@ type_t *typecheck_binary_op(treenode_t *lexp, treenode_t *rexp,
         return ltype;
     }
     if (op == OP_BINARY_BOOL) {
-        if (ltype->kind != TYPE_BASIC ||
-            ((type_basic_t *)ltype)->type_id != TYPE_INT) {
+        if (!type_is_int(ltype)) {
             semantic_error(7, lexp->lineno,
                            "Type mismatched for the operator and operands. "
                            "\"int\" is expected.");
@@ -696,8 +722,7 @@ type_t *typecheck_unary_op(treenode_t *exp, int op, int *is_lval)
         return exptype;
     }
     if (op == OP_UNARY_BOOL) {
-        if (exptype->kind != TYPE_BASIC ||
-            ((type_basic_t *)exptype)->type_id != TYPE_INT) {
+        if (!type_is_int(exptype)) {
             semantic_error(7, exp->lineno,
                            "Type mismatched for the operator and the operand. "
                            "\"int\" is expected.");

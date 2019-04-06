@@ -32,6 +32,13 @@ int type_is_equal(type_t *lhs, type_t *rhs)
     return 0;
 }
 
+int type_is_int(type_t *type)
+{
+    assert(type);
+    return (type->kind == TYPE_BASIC &&
+            ((type_basic_t *)type)->type_id == TYPE_INT);
+}
+
 void print_type(type_t *type)
 {
     assert(type);

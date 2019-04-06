@@ -39,6 +39,10 @@ int func(int i) {
 
 int func(struct Position p);
 
+int func(int i) {
+
+}
+
 int g();
 
 struct Temp1
@@ -53,10 +57,9 @@ struct Temp2
     float y;
 };
 
-
 int main()
 {
-    int i = 0;
+    int i = 1;
     int i;
     float f;
     int a[10];
@@ -70,11 +73,30 @@ int main()
     10 = i;
     10 + f;
     func(1,2);
-    i[0];
+    (a[1]+1)[0];
     i(10);
-    a[1.5] = 10;
+    a[1.5+3.8] = 10;
     i.x;
     p.n = p.x;
     i = g();
     t1 = t2;
+
+    if (1.5 + 123.3) {
+        int i;
+        int i;
+    }
+    else {
+        int i;
+        int i;
+    }
+
+    while (1) {
+        int i, k, k;
+    }
+}
+
+struct Position h()
+{
+    float j = 1.7;
+    return j;
 }

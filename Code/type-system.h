@@ -11,6 +11,7 @@ typedef struct type {
 } type_t;
 
 int type_is_equal(type_t *lhs, type_t *rhs);
+int type_is_int(type_t *type);
 void print_type(type_t *type);
 
 /* basic type: T := int | float */
