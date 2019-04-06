@@ -4,7 +4,6 @@ extern int yydebug;
 void yyrestart(FILE *);
 int yyparse(void);
 
-
 int main(int argc, char **argv)
 {
     FILE *f;

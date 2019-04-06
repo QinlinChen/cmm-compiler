@@ -578,22 +578,32 @@ type_t *typecheck_array_access(treenode_t *exp, treenode_t *idxexp, int *is_lval
     if (is_lval)
         *is_lval = 1;
 
+    int exptype_error = 0, idxexptype_error = 0;
     type_t *exptype = typecheck_exp(exp, NULL);
+    type_t *idxexptype = typecheck_exp(idxexp, NULL);
+    /* Beacause we want to report as many errors as possible,
+     * we check exptype errors and idxexptype errors seperately
+     * without early return. */
     if (!exptype)
-        return NULL;
-    if (exptype->kind != TYPE_ARRAY) {
+        exptype_error = 1;
+    else if (exptype->kind != TYPE_ARRAY) {
         semantic_error(10, exp->lineno, "\"%s\" is not an array.",
                        treenode_repr(exp));
-        return NULL;
+        exptype_error = 1;
     }
-    type_t *idxexptype = typecheck_exp(idxexp, NULL);
     if (!idxexptype)
-        return NULL;
-    if (!type_is_int(idxexptype)) {
+        idxexptype_error = 1;
+    else if (!type_is_int(idxexptype)) {
         semantic_error(12, idxexp->lineno, "\"%s\" is not an integer.",
                        treenode_repr(idxexp));
+        idxexptype_error = 1;
+    }
+    if (exptype_error || idxexptype_error) {
+        if (!exptype_error) /* Try repairing. */
+            return type_array_access((type_array_t *)exptype);
         return NULL;
     }
+
     return type_array_access((type_array_t *)exptype);
 }
 
@@ -613,13 +623,13 @@ type_t *typecheck_func_call(treenode_t *id, treenode_t *args, int *is_lval)
         semantic_error(11, id->lineno, "\"%s\" is not a function.", id->id);
         return NULL;
     }
+    type_func_t *funcinfo = (type_func_t *)symbol->type;
 
     typelist_t arglist;
     init_typelist(&arglist);
     if (args && analyse_args(args, &arglist) != 0)
-        return NULL;
-
-    type_func_t *funcinfo = (type_func_t *)symbol->type;
+        return funcinfo->ret_type;  /* Try repairing. */
+    
     if (!typelist_is_equal(&funcinfo->types, &arglist)) {
         /* sematic_error function is not strong enough to print
          * all error infomation as we want. So, here we work around it. */
@@ -628,7 +638,7 @@ type_t *typecheck_func_call(treenode_t *id, treenode_t *args, int *is_lval)
         printf(")\" is not applicable for arguments \"(");
         print_typelist(&arglist);
         printf(")\".\n");
-        return NULL;
+        return funcinfo->ret_type;  /* Try repairing. */
     }
     return funcinfo->ret_type;
 }
@@ -660,10 +670,8 @@ type_t *typecheck_binary_op(treenode_t *lexp, treenode_t *rexp,
         *is_lval = 0;
 
     type_t *ltype = typecheck_exp(lexp, NULL);
-    if (!ltype)
-        return NULL;
     type_t *rtype = typecheck_exp(rexp, NULL);
-    if (!rtype)
+    if (!ltype || !rtype)
         return NULL;
 
     if (!type_is_equal(ltype, rtype)) {
@@ -743,15 +751,13 @@ type_t *typecheck_assign(treenode_t *lexp, treenode_t *rexp, int *is_lval)
 
     int ltype_is_lval;
     type_t *ltype = typecheck_exp(lexp, &ltype_is_lval);
-    if (!ltype)
-        return NULL;
-    if (!ltype_is_lval) {
+    type_t *rtype = typecheck_exp(rexp, NULL);
+    if (ltype && !ltype_is_lval) {
         semantic_error(6, lexp->lineno, "The left-hand side of an assignment "
                        "must be a left value.");
         return NULL;
     }
-    type_t *rtype = typecheck_exp(rexp, NULL);
-    if (!rtype)
+    if (!ltype || !rtype)
         return NULL;
 
     if (!type_is_equal(ltype, rtype)) {

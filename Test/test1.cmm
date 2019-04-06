@@ -1,5 +1,10 @@
+struct A {
+    int x, y;
+};
+
+struct A f() {}
+
 int main()
 {
-    int i = 0;
-    j = i + 1;
+    i = (i = 1);
 }
