@@ -377,9 +377,12 @@ void analyse_param_dec(treenode_t *param_dec, fieldlist_t *paramlist)
     assert(!strcmp(param_dec->name, "ParamDec"));
     treenode_t *specifier = param_dec->child;
     assert(specifier);
-    treenode_t *var_dec = specifier->next;
 
     type_t *spec = analyse_specifier(specifier);
+    if (!spec)
+        return;
+
+    treenode_t *var_dec = specifier->next;
     symbol_t symbol;
     analyse_var_dec(var_dec, spec, &symbol);
     checked_paramlist_push_back(paramlist, &symbol);
