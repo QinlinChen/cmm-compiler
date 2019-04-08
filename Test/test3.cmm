@@ -1,0 +1,24 @@
+int f (int i, int j) {return 0;}
+float f1(){}
+int main(){
+    float
+    b
+    =
+    1.5
+    *
+    6
+    +
+    1;
+    int
+    a
+    =
+    1
+    *
+    1.6
+    -
+    0.7
+    /
+    5
+    ;
+    f(1,f1());
+}

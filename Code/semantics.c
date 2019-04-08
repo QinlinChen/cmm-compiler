@@ -438,12 +438,7 @@ void analyse_stmt(treenode_t *stmt, type_t *ret_sepc)
     assert(child);
 
     if (!strcmp(child->name, "Exp")) {
-        type_t *t = typecheck_exp(child, NULL);
-        if (t) {
-            printf("Exp:\n");
-            print_type(t);
-            printf("\n");
-        }   // FIXME: delete
+        typecheck_exp(child, NULL);
     }
     else if (!strcmp(child->name, "CompSt")) {
         analyse_comp_st(child, ret_sepc, NULL);

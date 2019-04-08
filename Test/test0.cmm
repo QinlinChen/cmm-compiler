@@ -1,4 +1,4 @@
-/* int i;
+int i;
 
 struct B;
 
@@ -25,7 +25,7 @@ struct E {
     int k = 2;
 } a, b;
 
-struct A x; */
+struct A x;
 
 int func(int i);
 

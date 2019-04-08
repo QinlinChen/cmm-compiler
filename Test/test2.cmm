@@ -1,0 +1,20 @@
+struct {
+    struct {
+        int i;
+    } a;
+    struct{
+        int i;
+    } b;
+} a;
+
+struct {
+    struct {
+        int i;
+        int j;
+    } a;
+} b;
+
+int main()
+{
+    a = b;
+}
