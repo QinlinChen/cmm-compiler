@@ -1,6 +1,6 @@
 int i;
 
-struct B;
+struct B;  // Error type 17: Undefined structure "B".
 
 struct A {
     int a;
@@ -10,19 +10,19 @@ struct A {
 
 struct AA {
     struct B b;
-    struct E e;
+    struct E e;  // Error type 17: Undefined structure "E".
 };
 
-struct C {
+struct C {  // Error type 16: Duplicated name "C".
     struct C { int x; } b;
 };
 
 struct D { };
 
 struct E {
-    int i = 1;
+    int i = 1;  // Error type 15: Field assigned during definition.
     int j, k;
-    int k = 2;
+    int k = 2;  // Error type 15: Redefined field "k". (Error type 15: Field assigned during definition.)
 } a, b;
 
 struct A x;
@@ -37,13 +37,13 @@ int func(int i) {
     return i;
 }
 
-int func(struct Position p);
+int func(struct Position p);  // Error type 19 Inconsistent declaration of function "func".
 
-int func(int i) {
+int func(int i) {  // Error type 4: Redefined function "func".
 
 }
 
-int g();
+int g();  // Error type 18: Undefined function "g". 
 
 struct Temp1
 {
@@ -60,43 +60,43 @@ struct Temp2
 int main()
 {
     int i = 1;
-    int i;
+    int i;  // Error type 3: Redefined variable "i".
     float f;
     int a[10];
     struct Position p;
     struct Temp1 t1;
     struct Temp2 t2;
 
-    j = i + 1;
-    inc(i);
-    i = 3.7;
-    10 = i;
-    10 + f;
-    func(1,2);
-    (a[1]+1)[0];
-    i(10);
-    a[1.5+3.8] = 10;
-    i.x;
-    p.n = p.x;
+    j = i + 1;  // Error type 1: Undefined variable "j".
+    inc(i);  // Error type 2: Undefined function "inc".
+    i = 3.7;  // Error type 5: Type mismatched for assignment.
+    10 = i;  // Error type 6: The left-hand side of an assignment must be a left value.
+    10 + f;  // Error type 7: Type mismatched for operands.
+    func(1,2);  // Error type 9: Function "func(int)" is not applicable for arguments "(int, int)".
+    (a[1]+1)[0];  // Error type 10: "(a[1]+1)" is not an array.
+    i(10);  // Error type 11: "i" is not a function.
+    a[1.5+3.8] = 10;  // Error type 12: "1.500000+3.800000" is not an integer.
+    i.x;  // Error type 13: Illegal use of ".".
+    p.n = p.x;  // Error type 14: Non-existent field "n".
     i = g();
     t1 = t2;
 
-    if (1.5 + 123.3) {
+    if (1.5 + 123.3) {  // My error type 0: Expression conflicts assumption 2.
         int i;
-        int i;
+        int i;  // Error type 3: Redefined variable "i".
     }
     else {
         int i;
-        int i;
+        int i;  // Error type 3: Redefined variable "i".
     }
 
     while (1) {
-        int i, k, k;
+        int i, k, k;  // Error type 3: Redefined variable "k".
     }
 }
 
 struct Position h()
 {
     float j = 1.7;
-    return j;
+    return j;  // Error type 8: Type mismatched for return.
 }
