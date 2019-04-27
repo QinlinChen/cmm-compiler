@@ -460,7 +460,7 @@ void analyse_stmt(treenode_t *stmt, type_t *ret_spec)
             semantic_error(0, exp->lineno, "Expression conflicts assumption 2.");
         treenode_t *stmt = exp->next->next;
         analyse_stmt(stmt, ret_spec);
-        if (child->token = IF && stmt->next)
+        if (child->token == IF && stmt->next)
             analyse_stmt(stmt->next->next, ret_spec);
     }
 }

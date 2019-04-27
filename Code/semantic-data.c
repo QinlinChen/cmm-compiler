@@ -199,7 +199,7 @@ unsigned int hash_str(const char *str)
     unsigned int val = 0, i;
     for (const char *p = str; *p; ++p) {
         val = (val << 2) + *p;
-        if (i = val & ~0x3fff)
+        if ((i = val & ~0x3fff))
             val = (val ^ (i >> 12)) & 0x3fff;
     }
     return val;
