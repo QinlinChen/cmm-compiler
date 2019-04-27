@@ -73,9 +73,9 @@ void analyse_param_dec(treenode_t *param_dec, fieldlist_t *fieldlist);
 
 /* Analyse CompSt. If 'params' is not NULL, it will add them to the
  * symbol table on entering the new scope. */
-void analyse_comp_st(treenode_t *comp_st, type_t *ret_sepc, fieldlist_t *params);
-void analyse_stmt_list(treenode_t *stmt_list, type_t *ret_sepc);
-void analyse_stmt(treenode_t *stmt, type_t *ret_sepc);
+void analyse_comp_st(treenode_t *comp_st, type_t *ret_spec, fieldlist_t *params);
+void analyse_stmt_list(treenode_t *stmt_list, type_t *ret_spec);
+void analyse_stmt(treenode_t *stmt, type_t *ret_spec);
 
 /* Typecheck. */
 int analyse_args(treenode_t *args, typelist_t *ret_args);
@@ -388,7 +388,7 @@ void analyse_param_dec(treenode_t *param_dec, fieldlist_t *paramlist)
     checked_paramlist_push_back(paramlist, &symbol);
 }
 
-void analyse_comp_st(treenode_t *comp_st, type_t *ret_sepc, fieldlist_t *params)
+void analyse_comp_st(treenode_t *comp_st, type_t *ret_spec, fieldlist_t *params)
 {
     assert(comp_st);
     assert(!strcmp(comp_st->name, "CompSt"));
@@ -404,12 +404,12 @@ void analyse_comp_st(treenode_t *comp_st, type_t *ret_sepc, fieldlist_t *params)
         analyse_def_list(child2, NULL, CONTEXT_VAR_DEF);
         treenode_t *child3 = child2->next;
         if (!strcmp(child3->name, "StmtList"))
-            analyse_stmt_list(child3, ret_sepc);
+            analyse_stmt_list(child3, ret_spec);
         else
             assert(!strcmp(child3->name, "RC"));
     }
     else if (!strcmp(child2->name, "StmtList")) {
-        analyse_stmt_list(child2, ret_sepc);
+        analyse_stmt_list(child2, ret_spec);
     }
     else {
         assert(!strcmp(child2->name, "RC"));
@@ -418,19 +418,19 @@ void analyse_comp_st(treenode_t *comp_st, type_t *ret_sepc, fieldlist_t *params)
     symbol_table_popenv();  /* Remember to pop environment! */
 }
 
-void analyse_stmt_list(treenode_t *stmt_list, type_t *ret_sepc)
+void analyse_stmt_list(treenode_t *stmt_list, type_t *ret_spec)
 {
     assert(stmt_list);
     assert(!strcmp(stmt_list->name, "StmtList"));
     treenode_t *stmt = stmt_list->child;
     assert(stmt);
 
-    analyse_stmt(stmt, ret_sepc);
+    analyse_stmt(stmt, ret_spec);
     if (stmt->next)
-        analyse_stmt_list(stmt->next, ret_sepc);
+        analyse_stmt_list(stmt->next, ret_spec);
 }
 
-void analyse_stmt(treenode_t *stmt, type_t *ret_sepc)
+void analyse_stmt(treenode_t *stmt, type_t *ret_spec)
 {
     assert(stmt);
     assert(!strcmp(stmt->name, "Stmt"));
@@ -441,12 +441,12 @@ void analyse_stmt(treenode_t *stmt, type_t *ret_sepc)
         typecheck_exp(child, NULL);
     }
     else if (!strcmp(child->name, "CompSt")) {
-        analyse_comp_st(child, ret_sepc, NULL);
+        analyse_comp_st(child, ret_spec, NULL);
     }
     else if (!strcmp(child->name, "RETURN")) {
         assert(child->next);
         type_t *ret_type = typecheck_exp(child->next, NULL);
-        if (ret_type && !type_is_equal(ret_sepc, ret_type)) {
+        if (ret_type && !type_is_equal(ret_spec, ret_type)) {
             semantic_error(8, child->next->lineno,
                            "Type mismatched for return.");
             return;
@@ -459,9 +459,9 @@ void analyse_stmt(treenode_t *stmt, type_t *ret_sepc)
         if (exptype && !type_is_int(exptype))
             semantic_error(0, exp->lineno, "Expression conflicts assumption 2.");
         treenode_t *stmt = exp->next->next;
-        analyse_stmt(stmt, ret_sepc);
+        analyse_stmt(stmt, ret_spec);
         if (child->token = IF && stmt->next)
-            analyse_stmt(stmt->next->next, ret_sepc);
+            analyse_stmt(stmt->next->next, ret_spec);
     }
 }
 
