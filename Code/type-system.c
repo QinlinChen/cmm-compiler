@@ -119,8 +119,6 @@ int type_array_is_equal(type_array_t *lhs, type_array_t *rhs)
 {
     assert(lhs);
     assert(rhs);
-    if (lhs->size != rhs->size)
-        return 0;
     return type_is_equal(lhs->extend_from, rhs->extend_from);
 }
 

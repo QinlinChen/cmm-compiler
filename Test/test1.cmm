@@ -1,20 +1,23 @@
 
- struct Temp1
- {
- int i;
- float j;
- };
+struct Temp1
+{
+  int i;
+  float j;
+};
 
 struct Temp2
- {
- int x;
- float y;
- };
+{
+  int x;
+  float y;
+};
 
- int main()
-
- {
- struct Temp1 t1;
- struct Temp2 t2;
- t1 = t2;
- }
+int main()
+{
+  int i[2][3][4];
+  int j[3][3];
+  struct Temp1 t1;
+  struct Temp2 t2;
+  
+  i[1] = j;
+  t1 = t2;
+}
