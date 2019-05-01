@@ -1,7 +1,6 @@
 #include "semantics.h"
 #include "type-system.h"
 #include "syntax.tab.h"
-#include "semantic-data.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,18 +40,10 @@ void semantic_analyse_r(treenode_t *node);
 /* Analyse ExtDef and add symbols(variables/functions) to the symbol table. */
 void analyse_ext_def(treenode_t *ext_def);
 
-/* Analyse Specifier and return the type infomation. */
-type_t *analyse_specifier(treenode_t *specifier);
 /* Analyse StructSpecifier and return the type infomation. */
 type_t *analyse_struct_specifier(treenode_t *struct_specifier);
 
-/* Analyse DefList, Def, DecList, Dec.
- * If it is called during the context of struct field definition,
- * we will append the field to the 'fieldlist'. Otherwise, it must
- * be analysing local definitions and we will add them to the symbol
- * table. In this case, 'fieldlist' can be NULL. */
-enum { CONTEXT_STRUCT_DEF, CONTEXT_VAR_DEF };
-void analyse_def_list(treenode_t *def_list, fieldlist_t *ret, int context);
+/* Analysis functions used by analyse_def_list */
 void analyse_def(treenode_t *def, fieldlist_t *fieldlist, int context);
 void analyse_dec_list(treenode_t *dec_list, type_t *spec,
                       fieldlist_t *fieldlist, int context);
@@ -65,10 +56,7 @@ void analyse_var_dec(treenode_t *var_dec, type_t *spec, symbol_t *ret);
 /* Analyse ExtDecList and add global variables to the symbol table. */
 void analyse_ext_dec_list(treenode_t *ext_dec_list, type_t *spec);
 
-/* Analyse FunDec and return a symbol of func type. It will also store
- * the parameters of the function in 'fieldlist' for analysing CompSt use. */
-void analyse_fun_dec(treenode_t *fun_dec, type_t *spec,
-                     symbol_t *ret_symbol, fieldlist_t *ret_params);
+/* Analysis functions used by analyse_func_dec */
 void analyse_var_list(treenode_t *var_list, fieldlist_t *fieldlist);
 void analyse_param_dec(treenode_t *param_dec, fieldlist_t *fieldlist);
 
@@ -98,13 +86,6 @@ type_t *typecheck_binary_op(treenode_t *lexp, treenode_t *rexp,
                             int op, int *is_lval);
 type_t *typecheck_unary_op(treenode_t *exp, int op, int *is_lval);
 type_t *typecheck_assign(treenode_t *lexp, treenode_t *rexp, int *is_lval);
-
-/* Wrapper functions that check semantic error. */
-int checked_structdef_table_add(type_struct_t *structdef, int lineno);
-int checked_fieldlist_push_back(fieldlist_t *fieldlist, symbol_t *symbol);
-int checked_paramlist_push_back(fieldlist_t *paramlist, symbol_t *symbol);
-int checked_symbol_table_add_var(symbol_t *symbol);
-int checked_symbol_table_add_func(symbol_t *func, int is_def);
 
 void semantic_analyse(treenode_t *root)
 {

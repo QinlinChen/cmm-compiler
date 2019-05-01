@@ -22,6 +22,8 @@ typedef struct operand {
 int alloc_varid();
 int alloc_labelid();
 
+void fprint_operand(FILE *fp, operand_t *op);
+
 /* ------------------------------------ *
  *              intercode               *
  * ------------------------------------ */
