@@ -3,6 +3,70 @@
 #include <stdlib.h>
 #include <assert.h>
 
+/* ------------------------------------ *
+ *              operator                *
+ * ------------------------------------ */
+
+int alloc_varid()
+{
+    static int id = 0;
+    return id++;
+}
+
+int alloc_labelid()
+{
+    static int id = 0;
+    return id++;
+}
+
+void init_var_operand(operand_t *op, int varid)
+{
+    assert(op);
+    op->kind = OPRAND_VAR;
+    op->varid = varid;
+}
+
+void init_addr_operand(operand_t *op, int varid)
+{
+    assert(op);
+    op->kind = OPRAND_ADDR;
+    op->varid = varid;
+}
+
+void init_const_operand(operand_t *op, int val)
+{
+    assert(op);
+    op->kind = OPRAND_CONST;
+    op->val = val;
+}
+
+void init_temp_var(operand_t *op)
+{
+    init_var_operand(op, alloc_varid());
+}
+
+void init_temp_addr(operand_t *op)
+{
+    init_addr_operand(op, alloc_varid());
+}
+
+void fprint_operand(FILE *fp, operand_t *op)
+{
+    switch (op->kind) {
+    case OPRAND_VAR: /* fall through */
+    case OPRAND_ADDR:
+        fprintf(fp, "v%d", op->varid); break;
+    case OPRAND_CONST:
+        fprintf(fp, "#%d", op->val); break;
+    default:
+        assert(0); break;
+    }
+}
+
+/* ------------------------------------ *
+ *              intercode               *
+ * ------------------------------------ */
+
 typedef struct ic_label {
     int kind;
     int labelid;
@@ -94,49 +158,6 @@ typedef struct ic_write {
     int kind;
     int varid;
 } ic_write_t;
-
-int alloc_varid()
-{
-    static int id = 0;
-    return id++;
-}
-
-int alloc_labelid()
-{
-    static int id = 0;
-    return id++;
-}
-
-void init_var_operand(operand_t *op, int varid)
-{
-    assert(op);
-    op->kind = OPRAND_VAR;
-    op->varid = varid;
-}
-
-void init_addr_operand(operand_t *op, int varid)
-{
-    assert(op);
-    op->kind = OPRAND_ADDR;
-    op->varid = varid;
-}
-
-void init_const_operand(operand_t *op, int val)
-{
-    assert(op);
-    op->kind = OPRAND_CONST;
-    op->val = val;
-}
-
-void init_temp_var(operand_t *op)
-{
-    init_var_operand(op, alloc_varid());
-}
-
-void init_temp_addr(operand_t *op)
-{
-    init_addr_operand(op, alloc_varid());
-}
 
 intercode_t *create_ic_label(int labelid)
 {
@@ -331,19 +352,6 @@ const char *icop_to_str(int icop)
     return NULL;
 }
 
-void fprint_operand(FILE *fp, operand_t *op)
-{
-    switch (op->kind) {
-    case OPRAND_VAR: /* fall through */
-    case OPRAND_ADDR:
-        fprintf(fp, "v%d", op->varid); break;
-    case OPRAND_CONST:
-        fprintf(fp, "#%d", op->val); break;
-    default:
-        assert(0); break;
-    }
-}
-
 void fprint_ic_label(FILE *fp, ic_label_t *ic)
 {
     fprintf(fp, "LABEL label%d :", ic->labelid);
@@ -482,5 +490,50 @@ void fprint_intercode(FILE *fp, intercode_t *ic)
         fprint_ic_write(fp, (ic_write_t *)ic); break;
     default:
         assert(0); break;
+    }
+}
+
+/* ------------------------------------ *
+ *           intercodelist              *
+ * ------------------------------------ */
+
+iclistnode_t *create_iclistnode(intercode_t *ic)
+{
+    iclistnode_t *newnode = malloc(sizeof(iclistnode_t));
+    if (newnode) {
+        newnode->ic = ic;
+        newnode->next = newnode->prev = NULL;
+    }
+    return newnode;
+}
+
+void init_iclist(iclist_t *iclist)
+{
+    assert(iclist);
+    iclist->size = 0;
+    iclist->front = iclist->back = NULL;
+}
+
+void iclist_push_back(iclist_t *iclist, intercode_t *ic)
+{
+    assert(iclist);
+    assert(ic);
+    iclistnode_t *newnode = create_iclistnode(ic);
+    assert(newnode);
+
+    if (iclist->size == 0)
+        iclist->front = newnode;
+    else
+        iclist->back->next = newnode;
+    newnode->prev = iclist->back;
+    iclist->back = newnode;
+    iclist->size++;
+}
+
+void fprint_iclist(FILE *fp, iclist_t *iclist)
+{
+    for (iclistnode_t *cur = iclist->front; cur != NULL; cur = cur->next) {
+        fprint_intercode(fp, cur->ic);
+        fprintf(fp, "\n");
     }
 }

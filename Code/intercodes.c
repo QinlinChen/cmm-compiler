@@ -6,5 +6,9 @@
 
 void intercodes_translate(treenode_t *root)
 {
-    
+    iclist_t iclist;
+    init_iclist(&iclist);
+
+
+    fprint_iclist(stdout, &iclist);
 }

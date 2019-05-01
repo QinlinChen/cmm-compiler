@@ -3,6 +3,10 @@
 
 #include <stdio.h>
 
+/* ------------------------------------ *
+ *               operand                *
+ * ------------------------------------ */
+
 enum {
     OPRAND_VAR, OPRAND_ADDR, OPRAND_CONST
 };
@@ -14,6 +18,13 @@ typedef struct operand {
         int val;
     };
 } operand_t;
+
+int alloc_varid();
+int alloc_labelid();
+
+/* ------------------------------------ *
+ *              intercode               *
+ * ------------------------------------ */
 
 enum {
     IC_LABEL, IC_FUNCDEF, IC_ASSIGN, IC_ARITHBOP,
@@ -31,9 +42,6 @@ enum {
 typedef struct intercode {
     int kind;
 } intercode_t;
-
-int alloc_varid();
-int alloc_labelid();
 
 void init_var_operand(operand_t *op, int varid);
 void init_addr_operand(operand_t *op, int varid);
@@ -61,5 +69,25 @@ intercode_t *create_ic_read(int varid);
 intercode_t *create_ic_write(int varid);
 
 void fprint_intercode(FILE *fp, intercode_t *ic);
+
+/* ------------------------------------ *
+ *           intercodelist              *
+ * ------------------------------------ */
+
+typedef struct iclistnode {
+    intercode_t *ic;
+    struct iclistnode *prev;
+    struct iclistnode *next;
+} iclistnode_t;
+
+typedef struct lclist {
+    int size;
+    iclistnode_t *front;
+    iclistnode_t *back;
+} iclist_t;
+
+void init_iclist(iclist_t *iclist);
+void iclist_push_back(iclist_t *iclist, intercode_t *ic);
+void fprint_iclist(FILE *fp, iclist_t *iclist);
 
 #endif
