@@ -13,6 +13,7 @@ void print_structdef_table();
 typedef struct symbol {
     type_t *type;
     const char *name;
+    int id;
     int lineno;
     int is_defined;
 } symbol_t;

@@ -1,6 +1,7 @@
 %{
 #include "syntaxtree.h"
 #include "semantics.h"
+#include "intercodes.h"
 
 #define YYSTYPE treenode_t *
 
@@ -59,6 +60,9 @@ Program: ExtDefList {
         add_child($$, $1);
         if (!has_error) {
             semantic_analyse($$);
+            if (!has_semantic_error()) {
+                intercodes_translate($$);
+            }
         }
     }
     ;

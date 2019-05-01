@@ -1,4 +1,5 @@
 #include "semantics.h"
+#include "type-system.h"
 #include "syntax.tab.h"
 #include "semantic-data.h"
 

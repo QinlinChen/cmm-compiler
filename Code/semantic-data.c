@@ -1,4 +1,5 @@
 #include "semantic-data.h"
+#include "intercode.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -296,6 +297,7 @@ void init_symbol_table()
 
 void symbol_table_add(symbol_t *symbol)
 {
+    symbol->id = alloc_varid();
     stnode_t *stnode = create_stnode(symbol);
     envstack_add(&symbol_table.envstack, stnode);
     hashtable_add(&symbol_table.hashtable, stnode);
