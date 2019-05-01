@@ -199,7 +199,8 @@ type_t *analyse_struct_specifier(treenode_t *struct_specifier)
         if (strcmp(child2->next->next->name, "RC"))
             analyse_def_list(child2->next->next, &fieldlist, CONTEXT_STRUCT_DEF);
         structdef = create_type_struct(id->id, &fieldlist);
-        checked_structdef_table_add(structdef, id->lineno);
+        if (checked_structdef_table_add(structdef, id->lineno) != 0)
+            return NULL;
         return (type_t *)structdef;
     }
     if (!strcmp(child2->name, "Tag")) {

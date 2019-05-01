@@ -8,6 +8,7 @@ enum {
 
 typedef struct type {
     int kind;
+    int width;
 } type_t;
 
 int type_is_equal(type_t *lhs, type_t *rhs);
@@ -24,6 +25,7 @@ const char *typeid_to_name(int id);
 
 typedef struct type_basic {
     int kind;
+    int width;
     int type_id;
 } type_basic_t;
 
@@ -34,6 +36,7 @@ void print_type_basic(type_basic_t *tb);
 /* array type: T := T[] */
 typedef struct type_array {
     int kind;
+    int width;
     int size;
     type_t *extend_from;
 } type_array_t;
@@ -64,10 +67,12 @@ void fieldlist_push_back(fieldlist_t *fieldlist,
 type_t *fieldlist_find_type_by_fieldname(fieldlist_t *fieldlist,
                                          const char *fieldname);
 int fieldlist_is_equal(fieldlist_t *lhs, fieldlist_t *rhs);
+int fieldlist_get_width(fieldlist_t *fieldlist);
 
 /* struct type: T := struct_name { T fieldname; ...; } */
 typedef struct type_struct {
     int kind;
+    int width;
     const char *structname;
     fieldlist_t fields;
 } type_struct_t;
@@ -101,6 +106,7 @@ void print_typelist(typelist_t *typelist);
 /* func type: T := T (T, T, ..., T) */
 typedef struct type_func {
     int kind;
+    int width;
     type_t *ret_type;
     typelist_t types;
 } type_func_t;

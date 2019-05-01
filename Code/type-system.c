@@ -81,6 +81,11 @@ type_basic_t *create_type_basic(int type_id)
     assert(tb);
     tb->kind = TYPE_BASIC;
     tb->type_id = type_id;
+    switch(type_id) {
+    case TYPE_INT:   tb->width = 4; break;
+    case TYPE_FLOAT: tb->width = 4; break;
+    default: assert(0); break;
+    }
     return tb;
 }
 
@@ -112,6 +117,7 @@ type_array_t *create_type_array(int size, type_t *extend_from)
     ta->kind = TYPE_ARRAY;
     ta->size = size;
     ta->extend_from = extend_from;
+    ta->width = extend_from->width * size;
     return ta;
 }
 
@@ -197,6 +203,14 @@ int fieldlist_is_equal(fieldlist_t *lhs, fieldlist_t *rhs)
     return 1;
 }
 
+int fieldlist_get_width(fieldlist_t *fieldlist)
+{
+    int width_sum = 0;
+    for (fieldlistnode_t *cur = fieldlist->front; cur != NULL; cur = cur->next)
+        width_sum += cur->type->width;
+    return width_sum;
+}
+
 void print_fieldlist(fieldlist_t *fieldlist)
 {
     for (fieldlistnode_t *cur = fieldlist->front; cur != NULL; cur = cur->next) {
@@ -223,6 +237,7 @@ type_struct_t *create_type_struct(const char *structname, fieldlist_t *fields)
         ts->structname = structname;
     if (fields)
         ts->fields = *fields;
+    ts->width = fieldlist_get_width(&ts->fields);
     return ts;
 }
 
@@ -339,6 +354,7 @@ type_func_t *create_type_func(type_t *ret_type, typelist_t *types)
     init_typelist(&tf->types);
     if (types)
         tf->types = *types;
+    tf->width = 0;
     return tf;
 }
 
