@@ -5,6 +5,6 @@
 #include <stdio.h>
 
 void intercodes_translate(treenode_t *root);
-void print_intercodes(FILE *fp);
+void fprint_intercodes(FILE *fp);
 
 #endif
