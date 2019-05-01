@@ -64,6 +64,14 @@ treenode_t *create_typenode(int lineno, const char *type_name)
     return newnode;
 }
 
+treenode_t *create_relopnode(int lineno, const char *relop)
+{
+    treenode_t *newnode = create_termnode("RELOP", lineno, RELOP);
+    assert(relop != NULL);
+    newnode->relop = relop;
+    return newnode;
+}
+
 void destroy_treenode(treenode_t *node)
 {
     if (!node)

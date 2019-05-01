@@ -10,10 +10,11 @@ typedef struct treenode
     int is_term;
     int token; /* used when is_term == 1 */
     union {
-        char *id;       /* name of ID */
-        int ival;       /* value of INT */
-        float fval;     /* value of FLOAT */
-        int type_id;     /* typeid of TYPE */
+        char *id;           /* name of ID */
+        int ival;           /* value of INT */
+        float fval;         /* value of FLOAT */
+        int type_id;        /* typeid of TYPE */
+        const char *relop;  /* operator of RELOP */
     };
     struct treenode *child;
     struct treenode *next;
@@ -26,6 +27,7 @@ treenode_t *create_idnode(int lineno, const char *id);
 treenode_t *create_intnode(int lineno, int ival);
 treenode_t *create_floatnode(int lineno, float fval);
 treenode_t *create_typenode(int lineno, const char *type_name);
+treenode_t *create_relopnode(int lineno, const char *relop);
 void destroy_treenode(treenode_t *node);
 
 void add_child(treenode_t *parent, treenode_t *child);

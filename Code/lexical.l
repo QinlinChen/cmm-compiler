@@ -60,12 +60,12 @@ exponentfloat   {pointfloat}[eE]("+"|"-")?{digit}+
 ";"  { yylval = create_termnode("SEMI", yylineno, SEMI); return SEMI; }
 ","  { yylval = create_termnode("COMMA", yylineno, COMMA); return COMMA; }
 "="  { yylval = create_termnode("ASSIGNOP", yylineno, ASSIGNOP); return ASSIGNOP; }
-"==" { yylval = create_termnode("RELOP", yylineno, RELOP); return RELOP; }
-">=" { yylval = create_termnode("RELOP", yylineno, RELOP); return RELOP; }
-"<=" { yylval = create_termnode("RELOP", yylineno, RELOP); return RELOP; }
-"!=" { yylval = create_termnode("RELOP", yylineno, RELOP); return RELOP; }
-">"  { yylval = create_termnode("RELOP", yylineno, RELOP); return RELOP; }
-"<"  { yylval = create_termnode("RELOP", yylineno, RELOP); return RELOP; }
+"==" { yylval = create_relopnode(yylineno, "=="); return RELOP; }
+">=" { yylval = create_relopnode(yylineno, ">="); return RELOP; }
+"<=" { yylval = create_relopnode(yylineno, "<="); return RELOP; }
+"!=" { yylval = create_relopnode(yylineno, "!="); return RELOP; }
+">"  { yylval = create_relopnode(yylineno, ">"); return RELOP; }
+"<"  { yylval = create_relopnode(yylineno, "<"); return RELOP; }
 "+"  { yylval = create_termnode("PLUS", yylineno, PLUS); return PLUS; }
 "-"  { yylval = create_termnode("MINUS", yylineno, MINUS); return MINUS; }
 "*"  { yylval = create_termnode("STAR", yylineno, STAR); return STAR; }
