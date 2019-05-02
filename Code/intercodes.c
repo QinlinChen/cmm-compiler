@@ -91,6 +91,14 @@ void translate_cond_or(treenode_t *lexp, treenode_t *rexp,
                        int labeltrue, int labelfalse);
 void translate_cond_otherwise(treenode_t *exp, int labeltrue, int labelfalse);
 
+/* Translate a memeory access expression and return its address. */
+operand_t translate_access(treenode_t *exp, type_t **ret);
+operand_t translate_access_var(treenode_t *id, type_t **ret);
+operand_t translate_access_array(treenode_t *exp, treenode_t *idxexp, type_t **ret);
+operand_t translate_access_struct(treenode_t *exp, treenode_t *id, type_t **ret);
+
+operand_t try_deref(operand_t *addr);
+
 void intercodes_translate(treenode_t *root)
 {
     init_varid();
@@ -98,7 +106,7 @@ void intercodes_translate(treenode_t *root)
     init_structdef_table();
     init_symbol_table();
     init_intercodes();
-    
+
     add_builtin_func();
 
     intercodes_translate_r(root);
@@ -148,7 +156,7 @@ void translate_ext_def(treenode_t *ext_def)
             return;
         if (is_def) {
             symbol_table_pushenv();
-            symbol_table_add_from_fieldlist(&paramlist);
+            symbol_table_add_params(&paramlist);
             gen_funcdef(func.name, &paramlist);
             translate_comp_st(child2->next);
             symbol_table_popenv();
@@ -167,7 +175,7 @@ void translate_ext_dec_list(treenode_t *ext_dec_list, type_t *spec)
 void gen_funcdef(const char *fname, fieldlist_t *params)
 {
     intercodes_push_back(create_ic_funcdef(fname));
-    
+
     symbol_t *symbol;
     for (fieldlistnode_t *param = params->front; param != NULL; param = param->next) {
         if (symbol_table_find_by_name(param->fieldname, &symbol) != 0) {
@@ -250,6 +258,10 @@ void translate_dec(treenode_t *dec, type_t *spec)
     symbol_t symbol;
     analyse_var_dec(var_dec, spec, &symbol);
     checked_symbol_table_add_var(&symbol);
+    if (symbol.type->kind != TYPE_BASIC) {
+        assert(symbol.type->kind != TYPE_FUNC);
+        intercodes_push_back(create_ic_dec(symbol.id, symbol.type->width));
+    }
 
     treenode_t *assignop = var_dec->next;
     if (assignop) {
@@ -292,6 +304,7 @@ void translate_stmt(treenode_t *stmt)
     else if (!strcmp(child->name, "RETURN")) {
         assert(child->next);
         operand_t ret = translate_exp(child->next);
+        ret = try_deref(&ret);
         intercodes_push_back(create_ic_return(&ret));
     }
     else if (!strcmp(child->name, "IF")) {
@@ -397,11 +410,9 @@ operand_t translate_exp(treenode_t *exp)
     if (!strcmp(child2->name, "AND") || !strcmp(child2->name, "OR"))
         return translate_boolexp(exp);
     if (!strcmp(child2->name, "DOT"))
-        assert(0); // TODO:
-        // return translate_struct_access(child, child2, child3);
+        return translate_access(exp, NULL);
     if (!strcmp(child2->name, "LB"))
-        assert(0); // TODO:
-        // return translate_array_access(child, child3);
+        return translate_access(exp, NULL);
     assert(0);  /* Should not reach here! */
 }
 
@@ -426,16 +437,30 @@ operand_t translate_var(treenode_t *id)
     assert(id);
     assert(id->token == ID);
     symbol_t *symbol;
-    operand_t op;
+    operand_t var;
 
     if (symbol_table_find_by_name(id->id, &symbol) != 0) {
         assert(0);
-        init_const_operand(&op, 0);
-        return op;
+        init_const_operand(&var, 0);
+        return var;
     }
 
-    init_var_operand(&op, symbol->id);
-    return op;
+    if (symbol->type->kind == TYPE_BASIC) {
+        init_var_operand(&var, symbol->id);
+        return var;
+    }
+
+    assert(symbol->type->kind == TYPE_ARRAY || symbol->type->kind == TYPE_STRUCT);
+    if (symbol->is_param) {
+        init_addr_operand(&var, symbol->id);
+        return var;
+    }
+
+    operand_t addr;
+    init_temp_addr(&addr);
+    init_var_operand(&var, symbol->id);
+    intercodes_push_back(create_ic_ref(&addr, &var));
+    return addr;
 }
 
 operand_t translate_func_call(treenode_t *id, treenode_t *args)
@@ -443,7 +468,7 @@ operand_t translate_func_call(treenode_t *id, treenode_t *args)
     assert(id);
     assert(id->id);
     operand_t ret;
-    
+
     if (!strcmp(id->id, "read")) {
         assert(!args);
         init_temp_var(&ret);
@@ -455,10 +480,11 @@ operand_t translate_func_call(treenode_t *id, treenode_t *args)
         assert(args);
         init_const_operand(&ret, 0);
         operand_t arg = get_first_arg(args);
+        arg = try_deref(&arg);
         intercodes_push_back(create_ic_write(&arg));
         return ret;
     }
-    
+
     if (args)
         translate_args(args);
     init_temp_var(&ret);
@@ -493,9 +519,13 @@ operand_t translate_assign(treenode_t *lexp, treenode_t *rexp)
 
     operand_t lhs = translate_exp(lexp);
     operand_t rhs = translate_exp(rexp);
+    rhs = try_deref(&rhs);
 
     assert(!is_const_operand(&lhs));
-    intercodes_push_back(create_ic_assign(&lhs, &rhs));
+    if (lhs.kind == OPERAND_ADDR)
+        intercodes_push_back(create_ic_drefassign(&lhs, &rhs));
+    else
+        intercodes_push_back(create_ic_assign(&lhs, &rhs));
     return lhs;
 }
 
@@ -505,12 +535,13 @@ operand_t translate_unary_minus(treenode_t *exp)
 
     operand_t target, zero;
     operand_t subexp = translate_exp(exp);
+    subexp = try_deref(&subexp);
 
     if (is_const_operand(&subexp)) {
         init_const_operand(&target, -subexp.val);
         return target;
     }
-        
+
     init_temp_var(&target);
     init_const_operand(&zero, 0);
     intercodes_push_back(create_ic_arithbop(ICOP_SUB, &target, &zero, &subexp));
@@ -521,10 +552,12 @@ operand_t translate_arithbop(treenode_t *lexp, treenode_t *rexp, int icop)
 {
     assert(lexp);
     assert(rexp);
-    
-    operand_t lhs = translate_exp(lexp);
-    operand_t rhs = translate_exp(rexp);
+
     operand_t target;
+    operand_t lhs = translate_exp(lexp);
+    lhs = try_deref(&lhs);
+    operand_t rhs = translate_exp(rexp);
+    rhs = try_deref(&rhs);
 
     if (is_const_operand(&lhs) && is_const_operand(&rhs)) {
         int target_val;
@@ -583,7 +616,7 @@ void translate_cond(treenode_t *exp, int labeltrue, int labelfalse)
             translate_cond_relop(child, child3, labeltrue, labelfalse,
                                  str_to_icop(child2->relop));
             return;
-        }   
+        }
         if (!strcmp(child2->name, "AND")) {
             translate_cond_and(child, child3, labeltrue, labelfalse);
             return;
@@ -605,7 +638,9 @@ void translate_cond_relop(treenode_t *lexp, treenode_t *rexp,
                           int labeltrue, int labelfalse, int icop)
 {
     operand_t lhs = translate_exp(lexp);
+    lhs = try_deref(&lhs);
     operand_t rhs = translate_exp(rexp);
+    rhs = try_deref(&rhs);
 
     if (is_const_operand(&lhs) && is_const_operand(&rhs)) {
         int cond;
@@ -647,6 +682,7 @@ void translate_cond_or(treenode_t *lexp, treenode_t *rexp,
 void translate_cond_otherwise(treenode_t *exp, int labeltrue, int labelfalse)
 {
     operand_t op = translate_exp(exp);
+    op = try_deref(&op);
 
     if (is_const_operand(&op)) {
         intercodes_push_back(create_ic_goto((op.val ? labeltrue : labelfalse)));
@@ -657,4 +693,129 @@ void translate_cond_otherwise(treenode_t *exp, int labeltrue, int labelfalse)
     init_const_operand(&zero, 0);
     intercodes_push_back(create_ic_condgoto(ICOP_NEQ, &op, &zero, labeltrue));
     intercodes_push_back(create_ic_goto(labelfalse));
+}
+
+operand_t translate_access(treenode_t *exp, type_t **ret)
+{
+    assert(exp);
+    assert(!strcmp(exp->name, "Exp"));
+    treenode_t *child = exp->child;
+    assert(child);
+
+    if (!strcmp(child->name, "ID")) {
+        assert(!child->next);
+        return translate_access_var(child, ret);
+    }
+    if (!strcmp(child->name, "LP"))
+        return translate_access(child->next, ret);
+
+    assert(!strcmp(child->name, "Exp"));
+    treenode_t *child2 = child->next;
+    assert(child2);
+    treenode_t *child3 = child2->next;
+    assert(child3);
+
+    if (!strcmp(child2->name, "DOT"))
+        return translate_access_struct(child, child3, ret);
+    if (!strcmp(child2->name, "LB"))
+        return translate_access_array(child, child3, ret);
+
+    assert(0);  /* Should not reach here! */
+}
+
+operand_t translate_access_var(treenode_t *id, type_t **ret)
+{
+    assert(id);
+    assert(id->token == ID);
+    symbol_t *symbol;
+    operand_t var;
+
+    if (symbol_table_find_by_name(id->id, &symbol) != 0) {
+        assert(0);
+        init_const_operand(&var, 0);
+        return var;
+    }
+
+    assert(symbol->type->kind == TYPE_ARRAY || symbol->type->kind == TYPE_STRUCT);
+    if (ret)
+        *ret = symbol->type;
+
+    if (symbol->is_param) {
+        init_addr_operand(&var, symbol->id);
+        return var;
+    }
+
+    operand_t addr;
+    init_temp_addr(&addr);
+    init_var_operand(&var, symbol->id);
+    intercodes_push_back(create_ic_ref(&addr, &var));
+    return addr;
+}
+
+operand_t translate_access_array(treenode_t *exp, treenode_t *idxexp, type_t **ret)
+{
+    assert(exp);
+    assert(idxexp);
+
+    type_t *subtype, *elemtype;
+    operand_t addr = translate_access(exp, &subtype);
+    assert(subtype->kind == TYPE_ARRAY);
+    elemtype = type_array_access((type_array_t *)subtype);
+    assert(elemtype);
+    if (ret)
+        *ret = elemtype;
+    operand_t idx = translate_exp(idxexp);
+    idx = try_deref(&idx);
+
+    operand_t offset, elemwidth;
+    if (is_const_operand(&idx)) {
+        if (idx.val == 0)
+            return addr;
+        init_const_operand(&offset, elemtype->width * idx.val);
+    }
+    else {
+        init_temp_var(&offset);
+        init_const_operand(&elemwidth, elemtype->width);
+        intercodes_push_back(create_ic_arithbop(ICOP_MUL, &offset, &idx, &elemwidth));
+    }
+    operand_t newaddr;
+    init_temp_addr(&newaddr);
+    intercodes_push_back(create_ic_arithbop(ICOP_ADD, &newaddr, &addr, &offset));
+    return newaddr;
+}
+
+operand_t translate_access_struct(treenode_t *exp, treenode_t *id, type_t **ret)
+{
+    assert(exp);
+    assert(id);
+
+    type_t *subtype, *fieldtype;
+    int offset;
+
+    operand_t addr = translate_access(exp, &subtype);
+    assert(subtype->kind == TYPE_STRUCT);
+    fieldtype = type_struct_access((type_struct_t *)subtype, id->id, &offset);
+    assert(fieldtype);
+    if (ret)
+        *ret = fieldtype;
+
+    if (offset == 0)
+        return addr;
+    operand_t offsetop, newaddr;
+    init_const_operand(&offsetop, offset);
+    init_temp_addr(&newaddr);
+    intercodes_push_back(create_ic_arithbop(ICOP_ADD, &newaddr, &addr, &offsetop));
+    return newaddr;
+}
+
+operand_t try_deref(operand_t *addr)
+{
+    assert(addr);
+    if (addr->kind != OPERAND_ADDR)
+        return *addr;
+
+    operand_t var;
+    init_temp_var(&var);
+    intercodes_push_back(create_ic_dref(&var, addr));
+    return var;
 }

@@ -246,9 +246,20 @@ int type_struct_is_equal(type_struct_t *lhs, type_struct_t *rhs)
     return fieldlist_is_equal(&lhs->fields, &rhs->fields);
 }
 
-type_t *type_struct_access(type_struct_t *ts, const char *fieldname)
+type_t *type_struct_access(type_struct_t *ts, const char *fieldname, int *offset)
 {
-    return fieldlist_find_type_by_fieldname(&ts->fields, fieldname);
+    int off = 0;
+    for (fieldlistnode_t *cur = ts->fields.front; cur != NULL; cur = cur->next) {
+        if (!strcmp(cur->fieldname, fieldname)) {
+            if (offset)
+                *offset = off;
+            return cur->type;
+        }
+        off += cur->type->width;
+    }
+    if (offset)
+        *offset = 0;
+    return NULL;
 }
 
 void print_type_struct(type_struct_t *ts)

@@ -79,7 +79,7 @@ typedef struct type_struct {
 
 type_struct_t *create_type_struct(const char *structname, fieldlist_t *fields);
 int type_struct_is_equal(type_struct_t *lhs, type_struct_t *rhs);
-type_t *type_struct_access(type_struct_t *ts, const char *fieldname);
+type_t *type_struct_access(type_struct_t *ts, const char *fieldname, int *offset);
 void print_type_struct(type_struct_t *ts);
 
 /* typelist */

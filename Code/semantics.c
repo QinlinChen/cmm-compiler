@@ -390,7 +390,7 @@ void analyse_comp_st(treenode_t *comp_st, type_t *ret_spec, fieldlist_t *params)
     assert(comp_st->child);
     symbol_table_pushenv();
     if (params)
-        symbol_table_add_from_fieldlist(params);
+        symbol_table_add_params(params);
 
     treenode_t *child2 = comp_st->child->next;
     assert(child2);
@@ -556,7 +556,7 @@ type_t *typecheck_struct_access(treenode_t *exp, treenode_t *dot,
         semantic_error(13, dot->lineno, "Illegal use of \".\".");
         return NULL;
     }
-    type_t *ret_type = type_struct_access((type_struct_t *)exptype, id->id);
+    type_t *ret_type = type_struct_access((type_struct_t *)exptype, id->id, NULL);
     if (!ret_type) {
         semantic_error(14, id->lineno, "Non-existent field \"%s\".", id->id);
         return NULL;

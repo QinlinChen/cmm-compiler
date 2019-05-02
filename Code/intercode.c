@@ -34,21 +34,21 @@ int alloc_labelid()
 void init_var_operand(operand_t *op, int varid)
 {
     assert(op);
-    op->kind = OPRAND_VAR;
+    op->kind = OPERAND_VAR;
     op->varid = varid;
 }
 
 void init_addr_operand(operand_t *op, int varid)
 {
     assert(op);
-    op->kind = OPRAND_ADDR;
+    op->kind = OPERAND_ADDR;
     op->varid = varid;
 }
 
 void init_const_operand(operand_t *op, int val)
 {
     assert(op);
-    op->kind = OPRAND_CONST;
+    op->kind = OPERAND_CONST;
     op->val = val;
 }
 
@@ -64,16 +64,16 @@ void init_temp_addr(operand_t *op)
 
 int is_const_operand(operand_t *op)
 {
-    return op->kind == OPRAND_CONST;
+    return op->kind == OPERAND_CONST;
 }
 
 void fprint_operand(FILE *fp, operand_t *op)
 {
     switch (op->kind) {
-    case OPRAND_VAR: /* fall through */
-    case OPRAND_ADDR:
+    case OPERAND_VAR: /* fall through */
+    case OPERAND_ADDR:
         fprintf(fp, "v%d", op->varid); break;
-    case OPRAND_CONST:
+    case OPERAND_CONST:
         fprintf(fp, "#%d", op->val); break;
     default:
         assert(0); break;

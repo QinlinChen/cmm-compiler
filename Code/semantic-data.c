@@ -275,12 +275,19 @@ void init_symbol(symbol_t *symbol, type_t *type, const char *name,
     symbol->name = name;
     symbol->lineno = lineno;
     symbol->is_defined = is_defined;
+    symbol->is_param = 0;
 }
 
 void symbol_set_defined(symbol_t *symbol, int is_defined)
 {
     assert(symbol);
     symbol->is_defined = is_defined;
+}
+
+void symbol_set_param(symbol_t *symbol, int is_param)
+{
+    assert(symbol);
+    symbol->is_param = is_param;
 }
 
 void print_symbol(symbol_t *symbol)
@@ -303,11 +310,12 @@ void symbol_table_add(symbol_t *symbol)
     hashtable_add(&symbol_table.hashtable, stnode);
 }
 
-void symbol_table_add_from_fieldlist(fieldlist_t *fieldlist)
+void symbol_table_add_params(fieldlist_t *fieldlist)
 {
     for (fieldlistnode_t *cur = fieldlist->front; cur != NULL; cur = cur->next) {
         symbol_t symbol;
         init_symbol(&symbol, cur->type, cur->fieldname, -1, 1);
+        symbol_set_param(&symbol, 1);
         symbol_table_add(&symbol);
     }
 }

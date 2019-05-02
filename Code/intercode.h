@@ -8,7 +8,7 @@
  * ------------------------------------ */
 
 enum {
-    OPRAND_VAR, OPRAND_ADDR, OPRAND_CONST
+    OPERAND_VAR, OPERAND_ADDR, OPERAND_CONST
 };
 
 typedef struct operand {
