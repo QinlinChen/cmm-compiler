@@ -1,6 +1,7 @@
 #include "semantics.h"
 #include "type-system.h"
 #include "syntax.tab.h"
+#include "intercode.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -43,15 +44,21 @@ void analyse_ext_def(treenode_t *ext_def);
 /* Analyse StructSpecifier and return the type infomation. */
 type_t *analyse_struct_specifier(treenode_t *struct_specifier);
 
+/* enum for 'context', the argument of analyse_def_list */
+enum { CONTEXT_STRUCT_DEF, CONTEXT_VAR_DEF };
+
+/* Analyse DefList. If it is called during the context of struct field definition,
+ * we will append the field to the 'fieldlist'. Otherwise, it must be analysing
+ * local definitions and we will add them to the symbol table. In this case,
+ * 'fieldlist' can be NULL. */
+void analyse_def_list(treenode_t *def_list, fieldlist_t *ret, int context);
+
 /* Analysis functions used by analyse_def_list */
 void analyse_def(treenode_t *def, fieldlist_t *fieldlist, int context);
 void analyse_dec_list(treenode_t *dec_list, type_t *spec,
                       fieldlist_t *fieldlist, int context);
 void analyse_dec(treenode_t *dec, type_t *spec,
                  fieldlist_t *fieldlist, int context);
-
-/* Analyse VarDec and return a symbol with type 'spec'. */
-void analyse_var_dec(treenode_t *var_dec, type_t *spec, symbol_t *ret);
 
 /* Analyse ExtDecList and add global variables to the symbol table. */
 void analyse_ext_dec_list(treenode_t *ext_dec_list, type_t *spec);
@@ -89,8 +96,10 @@ type_t *typecheck_assign(treenode_t *lexp, treenode_t *rexp, int *is_lval);
 
 void semantic_analyse(treenode_t *root)
 {
+    init_varid();
     init_structdef_table();
     init_symbol_table();
+
     add_builtin_func();
 
     semantic_analyse_r(root);

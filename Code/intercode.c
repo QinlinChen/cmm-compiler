@@ -8,16 +8,27 @@
  *              operator                *
  * ------------------------------------ */
 
-int alloc_varid()
+static int free_varid = 1;
+static int free_labelid = 1;
+
+void init_varid()
 {
-    static int id = 0;
-    return id++;
+    free_varid = 1;
+}
+
+void init_labelid()
+{
+    free_labelid = 1;
+}
+
+int alloc_varid()
+{    
+    return free_varid++;
 }
 
 int alloc_labelid()
 {
-    static int id = 0;
-    return id++;
+    return free_labelid++;
 }
 
 void init_var_operand(operand_t *op, int varid)

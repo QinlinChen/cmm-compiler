@@ -19,6 +19,8 @@ typedef struct operand {
     };
 } operand_t;
 
+void init_varid();
+void init_labelid();
 int alloc_varid();
 int alloc_labelid();
 

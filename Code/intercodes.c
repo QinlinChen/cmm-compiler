@@ -51,6 +51,12 @@ void intercodes_translate_r(treenode_t *node);
 void translate_ext_def(treenode_t *ext_def);
 void translate_ext_dec_list(treenode_t *ext_dec_list, type_t *spec);
 
+/* Translate local definitions. */
+void translate_def_list(treenode_t *def_list);
+void translate_def(treenode_t *def);
+void translate_dec_list(treenode_t *dec_list, type_t *spec);
+void translate_dec(treenode_t *dec, type_t *spec);
+
 /* Translate statements */
 void gen_funcdef(const char *fname, fieldlist_t *params);
 void translate_comp_st(treenode_t *comp_st);
@@ -87,9 +93,12 @@ void translate_cond_otherwise(treenode_t *exp, int labeltrue, int labelfalse);
 
 void intercodes_translate(treenode_t *root)
 {
+    init_varid();
+    init_labelid();
     init_structdef_table();
     init_symbol_table();
     init_intercodes();
+    
     add_builtin_func();
 
     intercodes_translate_r(root);
@@ -196,9 +205,63 @@ void translate_comp_st(treenode_t *comp_st)
 
 void translate_def_list(treenode_t *def_list)
 {
-    // TODO: gen code for array and struct
-    // TODO: gen code for init assign
-    analyse_def_list(def_list, NULL, CONTEXT_VAR_DEF);
+    assert(def_list);
+    assert(!strcmp(def_list->name, "DefList"));
+    treenode_t *def = def_list->child;
+    assert(def);
+
+    translate_def(def);
+    if (def->next)
+        translate_def_list(def->next);
+}
+
+void translate_def(treenode_t *def)
+{
+    assert(def);
+    assert(!strcmp(def->name, "Def"));
+    treenode_t *specifier = def->child;
+    assert(specifier);
+
+    type_t *spec = analyse_specifier(specifier);
+    if (!spec)
+        return;
+    translate_dec_list(specifier->next, spec);
+}
+
+void translate_dec_list(treenode_t *dec_list, type_t *spec)
+{
+    assert(dec_list);
+    assert(!strcmp(dec_list->name, "DecList"));
+    treenode_t *dec = dec_list->child;
+    assert(dec);
+
+    translate_dec(dec, spec);
+    if (dec->next)
+        translate_dec_list(dec->next->next, spec);
+}
+
+void translate_dec(treenode_t *dec, type_t *spec)
+{
+    assert(dec);
+    assert(!strcmp(dec->name, "Dec"));
+    treenode_t *var_dec = dec->child;
+    assert(var_dec);
+
+    symbol_t symbol;
+    analyse_var_dec(var_dec, spec, &symbol);
+    checked_symbol_table_add_var(&symbol);
+
+    treenode_t *assignop = var_dec->next;
+    if (assignop) {
+        assert(!strcmp(assignop->name, "ASSIGNOP"));
+        /* Create a temporory tree to fit the interface of 'translate_assign' */
+        treenode_t *temp_exp = create_nontermnode("Exp", symbol.lineno);
+        treenode_t *temp_id = create_idnode(symbol.lineno, symbol.name);
+        add_child(temp_exp, temp_id);
+        translate_assign(temp_exp, assignop->next);
+        destroy_treenode(temp_id);
+        destroy_treenode(temp_exp);
+    }
 }
 
 void translate_stmt_list(treenode_t *stmt_list)

@@ -1,24 +1,19 @@
-int f (int i, int j) {return 0;}
-float f1(){}
-int main(){
-    float
-    b
-    =
-    1.5
-    *
-    6
-    +
-    1;
-    int
-    a
-    =
-    1
-    *
-    1.6
-    -
-    0.7
-    /
-    5
-    ;
-    f(1,f1());
+int f(int n)
+{
+  if (n == 1)
+    return n;
+  else
+    return (n * f(n - 1));
+}
+
+int main()
+{
+  int m, result;
+  m = read();
+  if (m > 1)
+    result = f(m);
+  else
+    result = 1;
+  write(result);
+  return 0;
 }

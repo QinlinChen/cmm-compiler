@@ -12,19 +12,13 @@ void semantic_analyse(treenode_t *root);
 /* Analyse Specifier and return the type infomation. */
 type_t *analyse_specifier(treenode_t *specifier);
 
-/* enum for 'context', the argument of analyse_def_list */
-enum { CONTEXT_STRUCT_DEF, CONTEXT_VAR_DEF };
-
-/* Analyse DefList. If it is called during the context of struct field definition,
- * we will append the field to the 'fieldlist'. Otherwise, it must be analysing
- * local definitions and we will add them to the symbol table. In this case,
- * 'fieldlist' can be NULL. */
-void analyse_def_list(treenode_t *def_list, fieldlist_t *ret, int context);
-
 /* Analyse FunDec and return a symbol of func type. It will also store
  * the parameters of the function in 'fieldlist' for analysing CompSt use. */
 void analyse_fun_dec(treenode_t *fun_dec, type_t *spec,
                      symbol_t *ret_symbol, fieldlist_t *ret_params);
+
+/* Analyse VarDec and return a symbol with type 'spec'. */
+void analyse_var_dec(treenode_t *var_dec, type_t *spec, symbol_t *ret);
 
 /* Wrapper functions that check semantic errors. */
 int checked_structdef_table_add(type_struct_t *structdef, int lineno);
