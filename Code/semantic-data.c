@@ -371,3 +371,22 @@ void print_symbol_table()
     printf("hashtable:\n");
     print_hashtable(&symbol_table.hashtable);
 }
+
+void add_builtin_func()
+{
+    symbol_t readfunc, writefunc;
+    typelist_t typelist;
+
+    /* add 'int read()' */
+    type_t *inttype = (type_t *)create_type_basic(TYPE_INT);
+    type_t *readfunctype = (type_t *)create_type_func(inttype, NULL);
+    init_symbol(&readfunc, readfunctype, "read", 0, 1);
+    symbol_table_add(&readfunc);
+
+    /* add 'int write(int)' */
+    init_typelist(&typelist);
+    typelist_push_back(&typelist, inttype);
+    type_t *writefunctype = (type_t *)create_type_func(inttype, &typelist);
+    init_symbol(&writefunc, writefunctype, "write", 0, 1);
+    symbol_table_add(&writefunc);
+}

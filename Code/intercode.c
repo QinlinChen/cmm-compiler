@@ -207,7 +207,7 @@ typedef struct ic_read {
 
 typedef struct ic_write {
     int kind;
-    int varid;
+    operand_t var;
 } ic_write_t;
 
 intercode_t *create_ic_label(int labelid)
@@ -376,12 +376,12 @@ intercode_t *create_ic_read(int varid)
     return (intercode_t *)ic;
 }
 
-intercode_t *create_ic_write(int varid)
+intercode_t *create_ic_write(operand_t *var)
 {
     ic_write_t *ic = malloc(sizeof(ic_write_t));
     assert(ic);
     ic->kind = IC_WRITE;
-    ic->varid = varid;
+    ic->var = *var;
     return (intercode_t *)ic;
 }
 
@@ -481,7 +481,8 @@ void fprint_ic_read(FILE *fp, ic_read_t *ic)
 
 void fprint_ic_write(FILE *fp, ic_write_t *ic)
 {
-    fprintf(fp, "WRITE v%d", ic->varid);
+    fprintf(fp, "WRITE ");
+    fprint_operand(fp, &ic->var);
 }
 
 void fprint_intercode(FILE *fp, intercode_t *ic)

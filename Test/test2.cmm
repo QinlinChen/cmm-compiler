@@ -1,7 +1,10 @@
+int f(int i, int j, int k)
+{
+    
+}
 
 int main()
 {
     int i;
-    
-    2 > 1;
+    write(f(read(), 2 + 3, i));
 }

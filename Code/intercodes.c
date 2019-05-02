@@ -47,22 +47,29 @@ void translate_error(int lineno, const char *msg, ...)
  *              translate               *
  * ------------------------------------ */
 
-void add_builtin_func();
 void intercodes_translate_r(treenode_t *node);
 void translate_ext_def(treenode_t *ext_def);
 void translate_ext_dec_list(treenode_t *ext_dec_list, type_t *spec);
 
+// TODO: gen code for stmt
+void gen_funcdef(const char *fname, fieldlist_t *params);
 void translate_comp_st(treenode_t *comp_st);
 void translate_def_list(treenode_t *def_list);
 void translate_stmt_list(treenode_t *stmt_list);
+void translate_stmt(treenode_t *stmt);
 
 /* Translate an expression and return the result in operand_t. */
 operand_t translate_exp(treenode_t *exp);
 operand_t translate_literal(treenode_t *literal);
 operand_t translate_var(treenode_t *id);
+operand_t translate_func_call(treenode_t *id, treenode_t *args);
+operand_t translate_assign(treenode_t *lexp, treenode_t *rexp);
 operand_t translate_unary_minus(treenode_t *exp);
 operand_t translate_arithbop(treenode_t *lexp, treenode_t *rexp, int icop);
-operand_t translate_assign(treenode_t *lexp, treenode_t *rexp);
+operand_t translate_boolexp(treenode_t *exp);
+
+void translate_args(treenode_t *args);
+operand_t get_first_arg(treenode_t *args);
 
 /* Translate an expression as a condition. */
 void translate_cond(treenode_t *exp, int truelabel, int falselabel);
@@ -85,25 +92,6 @@ void intercodes_translate(treenode_t *root)
     intercodes_translate_r(root);
 
     fprint_intercodes(stdout);
-}
-
-void add_builtin_func()
-{
-    symbol_t readfunc, writefunc;
-    typelist_t typelist;
-
-    /* add 'int read()' */
-    type_t *inttype = (type_t *)create_type_basic(TYPE_INT);
-    type_t *readfunctype = (type_t *)create_type_func(inttype, NULL);
-    init_symbol(&readfunc, readfunctype, "read", 0, 1);
-    symbol_table_add(&readfunc);
-
-    /* add 'int write(int)' */
-    init_typelist(&typelist);
-    typelist_push_back(&typelist, inttype);
-    type_t *writefunctype = (type_t *)create_type_func(inttype, &typelist);
-    init_symbol(&writefunc, writefunctype, "write", 0, 1);
-    symbol_table_add(&writefunc);
 }
 
 void intercodes_translate_r(treenode_t *node)
@@ -148,7 +136,8 @@ void translate_ext_def(treenode_t *ext_def)
             return;
         if (is_def) {
             symbol_table_pushenv();
-            // TODO: gen func and params
+            symbol_table_add_from_fieldlist(&paramlist);
+            gen_funcdef(func.name, &paramlist);
             translate_comp_st(child2->next);
             symbol_table_popenv();
         }
@@ -161,6 +150,20 @@ void translate_ext_dec_list(treenode_t *ext_dec_list, type_t *spec)
 {
     translate_error(ext_dec_list->lineno, "Assumption 4 is violated. "
                                           "Global variables are not allowed.");
+}
+
+void gen_funcdef(const char *fname, fieldlist_t *params)
+{
+    intercodes_push_back(create_ic_funcdef(fname));
+    
+    symbol_t *symbol;
+    for (fieldlistnode_t *param = params->front; param != NULL; param = param->next) {
+        if (symbol_table_find_by_name(param->fieldname, &symbol) != 0) {
+            assert(0);
+            return;
+        }
+        intercodes_push_back(create_ic_param(symbol->id));
+    }
 }
 
 void translate_comp_st(treenode_t *comp_st)
@@ -191,23 +194,55 @@ void translate_comp_st(treenode_t *comp_st)
 void translate_def_list(treenode_t *def_list)
 {
     // TODO: gen code for array and struct
+    // TODO: gen code for init assign
     analyse_def_list(def_list, NULL, CONTEXT_VAR_DEF);
 }
 
 void translate_stmt_list(treenode_t *stmt_list)
 {
-    // FIXME:
-    if (!stmt_list)
-        return;
+    assert(stmt_list);
+    assert(!strcmp(stmt_list->name, "StmtList"));
+    treenode_t *stmt = stmt_list->child;
+    assert(stmt);
 
-    if (!strcmp(stmt_list->name, "Exp")) {
-        translate_cond(stmt_list, 1, 2);
-        printf("\n");
-        return;
+    translate_stmt(stmt);
+    if (stmt->next)
+        translate_stmt_list(stmt->next);
+}
+
+void translate_stmt(treenode_t *stmt)
+{
+    assert(stmt);
+    assert(!strcmp(stmt->name, "Stmt"));
+    treenode_t *child = stmt->child;
+    assert(child);
+
+    if (!strcmp(child->name, "Exp")) {
+        translate_exp(child);
     }
-
-    for (treenode_t *child = stmt_list->child; child != NULL; child = child->next)
-        translate_stmt_list(child);
+    // else if (!strcmp(child->name, "CompSt")) {
+    //     analyse_comp_st(child, ret_spec, NULL);
+    // }
+    // else if (!strcmp(child->name, "RETURN")) {
+    //     assert(child->next);
+    //     type_t *ret_type = typecheck_exp(child->next, NULL);
+    //     if (ret_type && !type_is_equal(ret_spec, ret_type)) {
+    //         semantic_error(8, child->next->lineno,
+    //                        "Type mismatched for return.");
+    //         return;
+    //     }
+    // }
+    // else {
+    //     assert(!strcmp(child->name, "IF") || !strcmp(child->name, "WHILE"));
+    //     treenode_t *exp = child->next->next;
+    //     type_t *exptype = typecheck_exp(exp, NULL);
+    //     if (exptype && !type_is_int(exptype))
+    //         semantic_error(0, exp->lineno, "Expression conflicts assumption 2.");
+    //     treenode_t *stmt = exp->next->next;
+    //     analyse_stmt(stmt, ret_spec);
+    //     if (child->token == IF && stmt->next)
+    //         analyse_stmt(stmt->next->next, ret_spec);
+    // }
 }
 
 operand_t translate_exp(treenode_t *exp)
@@ -223,24 +258,21 @@ operand_t translate_exp(treenode_t *exp)
         if (!child->next) {
             return translate_var(child);
         }
-        // TODO: gen code for funccall
-
-        // assert(!strcmp(child->next->name, "LP"));
-        // treenode_t *child3 = child->next->next;
-        // assert(child3);
-        // if (!strcmp(child3->name, "Args"))
-        //     return typecheck_func_call(child, child3, is_lval);
-        // assert(!strcmp(child3->name, "RP"));
-        // return typecheck_func_call(child, NULL, is_lval);
+        assert(!strcmp(child->next->name, "LP"));
+        treenode_t *child3 = child->next->next;
+        assert(child3);
+        if (!strcmp(child3->name, "Args"))
+            return translate_func_call(child, child3);
+        assert(!strcmp(child3->name, "RP"));
+        return translate_func_call(child, NULL);
     }
     if (!strcmp(child->name, "LP"))
         return translate_exp(child->next);
     if (!strcmp(child->name, "MINUS"))
         return translate_unary_minus(child->next);
-    if (!strcmp(child->name, "NOT")) {
-        assert(0);  // TODO:
-        // return typecheck_unary_op(child->next, OP_UNARY_BOOL, is_lval);
-    }
+    if (!strcmp(child->name, "NOT"))
+        return translate_boolexp(exp);
+
     assert(!strcmp(child->name, "Exp"));
     treenode_t *child2 = child->next;
     assert(child2);
@@ -256,20 +288,17 @@ operand_t translate_exp(treenode_t *exp)
         return translate_arithbop(child, child3, ICOP_DIV);
     if (!strcmp(child2->name, "ASSIGNOP"))
         return translate_assign(child, child3);
+    if (!strcmp(child2->name, "RELOP"))
+        return translate_boolexp(exp);
+    if (!strcmp(child2->name, "AND") || !strcmp(child2->name, "OR"))
+        return translate_boolexp(exp);
     if (!strcmp(child2->name, "DOT"))
-        assert(0);
+        assert(0); // TODO:
         // return typecheck_struct_access(child, child2, child3, is_lval);
     if (!strcmp(child2->name, "LB"))
-        assert(0);
+        assert(0); // TODO:
         // return typecheck_array_access(child, child3, is_lval);
-
-    // if (!strcmp(child2->name, "RELOP"))
-    //     return typecheck_binary_op(child, child3, OP_REL, is_lval);
-    // if (!strcmp(child2->name, "AND") || !strcmp(child2->name, "OR"))
-    //     return typecheck_binary_op(child, child3, OP_BINARY_BOOL, is_lval);
-
     assert(0);  /* Should not reach here! */
-
 }
 
 operand_t translate_literal(treenode_t *literal)
@@ -303,6 +332,67 @@ operand_t translate_var(treenode_t *id)
 
     init_var_operand(&op, symbol->id);
     return op;
+}
+
+operand_t translate_func_call(treenode_t *id, treenode_t *args)
+{
+    assert(id);
+    assert(id->id);
+    operand_t ret;
+    
+    if (!strcmp(id->id, "read")) {
+        assert(!args);
+        init_temp_var(&ret);
+        intercodes_push_back(create_ic_read(ret.varid));
+        return ret;
+    }
+
+    if (!strcmp(id->id, "write")) {
+        assert(args);
+        init_const_operand(&ret, 0);
+        operand_t arg = get_first_arg(args);
+        intercodes_push_back(create_ic_write(&arg));
+        return ret;
+    }
+    
+    if (args)
+        translate_args(args);
+    init_temp_var(&ret);
+    intercodes_push_back(create_ic_call(id->id, ret.varid));
+    return ret;
+}
+
+void translate_args(treenode_t *args)
+{
+    assert(args);
+    assert(!strcmp(args->name, "Args"));
+    treenode_t *arg = args->child;
+    assert(arg);
+
+    operand_t result = translate_exp(arg);
+    if (arg->next)
+        translate_args(arg->next->next);
+    intercodes_push_back(create_ic_arg(&result));
+}
+
+operand_t get_first_arg(treenode_t *args)
+{
+    assert(args);
+    assert(!strcmp(args->name, "Args"));
+    return translate_exp(args->child);
+}
+
+operand_t translate_assign(treenode_t *lexp, treenode_t *rexp)
+{
+    assert(lexp);
+    assert(rexp);
+
+    operand_t lhs = translate_exp(lexp);
+    operand_t rhs = translate_exp(rexp);
+
+    assert(!is_const_operand(&lhs));
+    intercodes_push_back(create_ic_assign(&lhs, &rhs));
+    return lhs;
 }
 
 operand_t translate_unary_minus(treenode_t *exp)
@@ -350,17 +440,21 @@ operand_t translate_arithbop(treenode_t *lexp, treenode_t *rexp, int icop)
     return target;
 }
 
-operand_t translate_assign(treenode_t *lexp, treenode_t *rexp)
+operand_t translate_boolexp(treenode_t *exp)
 {
-    assert(lexp);
-    assert(rexp);
+    int truelabel = alloc_labelid();
+    int falselabel = alloc_labelid();
+    operand_t zero, one, op;
+    init_const_operand(&zero, 0);
+    init_const_operand(&one, 1);
+    init_temp_var(&op);
 
-    operand_t lhs = translate_exp(lexp);
-    operand_t rhs = translate_exp(rexp);
-
-    assert(!is_const_operand(&lhs));
-    intercodes_push_back(create_ic_assign(&lhs, &rhs));
-    return lhs;
+    intercodes_push_back(create_ic_assign(&op, &zero));
+    translate_cond(exp, truelabel, falselabel);
+    intercodes_push_back(create_ic_label(truelabel));
+    intercodes_push_back(create_ic_assign(&op, &one));
+    intercodes_push_back(create_ic_label(falselabel));
+    return op;
 }
 
 void translate_cond(treenode_t *exp, int truelabel, int falselabel)
@@ -370,6 +464,10 @@ void translate_cond(treenode_t *exp, int truelabel, int falselabel)
     treenode_t *child = exp->child;
     assert(child);
 
+    if (!strcmp(child->name, "LP")) {
+        translate_cond(child->next, truelabel, falselabel);
+        return;
+    }
     if (!strcmp(child->name, "NOT")) {
         translate_cond_not(exp->next, truelabel, falselabel);
         return;

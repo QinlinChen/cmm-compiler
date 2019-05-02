@@ -2,6 +2,7 @@
 #include "syntaxtree.h"
 #include "semantics.h"
 #include "intercodes.h"
+extern FILE *fout;
 
 #define YYSTYPE treenode_t *
 
@@ -62,6 +63,7 @@ Program: ExtDefList {
             semantic_analyse($$);
             if (!has_semantic_error()) {
                 intercodes_translate($$);
+                fprint_intercodes(fout);
             }
         }
     }

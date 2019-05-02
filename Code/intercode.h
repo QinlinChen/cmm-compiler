@@ -72,7 +72,7 @@ intercode_t *create_ic_arg(operand_t *arg);
 intercode_t *create_ic_call(const char *fname, int retvarid);
 intercode_t *create_ic_param(int varid);
 intercode_t *create_ic_read(int varid);
-intercode_t *create_ic_write(int varid);
+intercode_t *create_ic_write(operand_t *var);
 
 void fprint_intercode(FILE *fp, intercode_t *ic);
 

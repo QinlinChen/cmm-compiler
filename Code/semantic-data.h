@@ -33,4 +33,6 @@ int symbol_table_find_by_name_in_curenv(const char *name, symbol_t **ret);
 void symbol_table_check_undefined_symbol();
 void print_symbol_table();
 
+void add_builtin_func();
+
 #endif

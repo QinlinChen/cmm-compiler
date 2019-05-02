@@ -91,7 +91,10 @@ void semantic_analyse(treenode_t *root)
 {
     init_structdef_table();
     init_symbol_table();
+    add_builtin_func();
+
     semantic_analyse_r(root);
+
     symbol_table_check_undefined_symbol();
 
     // print_structdef_table();
