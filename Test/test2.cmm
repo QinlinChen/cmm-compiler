@@ -1,10 +1,23 @@
-int f(int i, int j, int k)
+int sum(int begin, int end)
 {
-    
+    int sum;
+
+    sum = 0;
+    while (begin != end) {
+        sum = sum + begin;
+        begin = begin + 1;
+    }
+    return sum;
 }
 
 int main()
 {
-    int i;
-    write(f(read(), 2 + 3, i));
+    int x, y;
+
+    x = 1;
+    y = 101;
+
+    write(sum(x, y));
+
+    return 0;
 }

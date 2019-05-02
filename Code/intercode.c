@@ -387,7 +387,7 @@ intercode_t *create_ic_write(operand_t *var)
 
 void fprint_ic_label(FILE *fp, ic_label_t *ic)
 {
-    fprintf(fp, "LABEL label%d :", ic->labelid);
+    fprintf(fp, "LABEL L%d :", ic->labelid);
 }
 
 void fprint_ic_funcdef(FILE *fp, ic_funcdef_t *ic)
@@ -435,7 +435,7 @@ void fprint_ic_drefassign(FILE *fp, ic_drefassign_t *ic)
 
 void fprint_ic_goto(FILE *fp, ic_goto_t *ic)
 {
-    fprintf(fp, "GOTO label%d", ic->labelid);
+    fprintf(fp, "GOTO L%d", ic->labelid);
 }
 
 void fprint_ic_condgoto(FILE *fp, ic_condgoto_t *ic)
@@ -444,7 +444,7 @@ void fprint_ic_condgoto(FILE *fp, ic_condgoto_t *ic)
     fprint_operand(fp, &ic->lhs);
     fprintf(fp, " %s ", icop_to_str(ic->relop));
     fprint_operand(fp, &ic->rhs);
-    fprintf(fp, " GOTO label%d", ic->labelid);
+    fprintf(fp, " GOTO L%d", ic->labelid);
 }
 
 void fprint_ic_return(FILE *fp, ic_return_t *ic)
