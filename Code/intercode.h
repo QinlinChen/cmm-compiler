@@ -22,6 +22,7 @@ typedef struct operand {
 int alloc_varid();
 int alloc_labelid();
 
+int is_const_operand(operand_t *op);
 void fprint_operand(FILE *fp, operand_t *op);
 
 /* ------------------------------------ *
@@ -40,6 +41,9 @@ enum {
     ICOP_EQ, ICOP_NEQ, ICOP_L, ICOP_LE,
     ICOP_G, ICOP_GE
 };
+
+const char *icop_to_str(int icop);
+int str_to_icop(const char *str);
 
 typedef struct intercode {
     int kind;

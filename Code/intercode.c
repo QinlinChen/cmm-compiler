@@ -1,6 +1,7 @@
 #include "intercode.h"
 
 #include <stdlib.h>
+#include <string.h>
 #include <assert.h>
 
 /* ------------------------------------ *
@@ -50,6 +51,11 @@ void init_temp_addr(operand_t *op)
     init_addr_operand(op, alloc_varid());
 }
 
+int is_const_operand(operand_t *op)
+{
+    return op->kind == OPRAND_CONST;
+}
+
 void fprint_operand(FILE *fp, operand_t *op)
 {
     switch (op->kind) {
@@ -66,6 +72,51 @@ void fprint_operand(FILE *fp, operand_t *op)
 /* ------------------------------------ *
  *              intercode               *
  * ------------------------------------ */
+
+const char *icop_to_str(int icop)
+{
+    switch (icop) {
+    case ICOP_ADD: return "+";
+    case ICOP_SUB: return "-";
+    case ICOP_MUL: return "*";
+    case ICOP_DIV: return "/";
+    case ICOP_EQ: return "==";
+    case ICOP_NEQ: return "!=";
+    case ICOP_L: return "<";
+    case ICOP_LE: return "<=";
+    case ICOP_G: return ">";
+    case ICOP_GE: return ">=";
+    default: assert(0); break;
+    }
+    return NULL;
+}
+
+int str_to_icop(const char *str)
+{
+    assert(str);
+    if (!strcmp(str, "+"))
+        return ICOP_ADD;
+    if (!strcmp(str, "-"))
+        return ICOP_SUB;
+    if (!strcmp(str, "*"))
+        return ICOP_MUL;
+    if (!strcmp(str, "/"))
+        return ICOP_DIV;
+    if (!strcmp(str, "=="))
+        return ICOP_EQ;
+    if (!strcmp(str, "!="))
+        return ICOP_NEQ;
+    if (!strcmp(str, "<"))
+        return ICOP_L;
+    if (!strcmp(str, "<="))
+        return ICOP_LE;
+    if (!strcmp(str, ">"))
+        return ICOP_G;
+    if (!strcmp(str, ">="))
+        return ICOP_GE;
+    assert(0);
+    return 0;
+}
 
 typedef struct ic_label {
     int kind;
@@ -332,24 +383,6 @@ intercode_t *create_ic_write(int varid)
     ic->kind = IC_WRITE;
     ic->varid = varid;
     return (intercode_t *)ic;
-}
-
-const char *icop_to_str(int icop)
-{
-    switch (icop) {
-    case ICOP_ADD: return "+";
-    case ICOP_SUB: return "-";
-    case ICOP_MUL: return "*";
-    case ICOP_DIV: return "/";
-    case ICOP_EQ: return "==";
-    case ICOP_NEQ: return "!=";
-    case ICOP_L: return "<";
-    case ICOP_LE: return "<=";
-    case ICOP_G: return ">";
-    case ICOP_GE: return ">=";
-    default: assert(0); break;
-    }
-    return NULL;
 }
 
 void fprint_ic_label(FILE *fp, ic_label_t *ic)
