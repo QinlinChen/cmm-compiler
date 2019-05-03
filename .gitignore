@@ -6,3 +6,4 @@ parser
 .vscode
 *.ir
 irsim
+temp.cmm
