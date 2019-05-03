@@ -5,3 +5,4 @@ parser
 *.output
 .vscode
 *.ir
+irsim
