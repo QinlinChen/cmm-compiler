@@ -76,6 +76,7 @@ operand_t translate_assign(treenode_t *lexp, treenode_t *rexp);
 operand_t translate_unary_minus(treenode_t *exp);
 operand_t translate_arithbop(treenode_t *lexp, treenode_t *rexp, int icop);
 operand_t translate_boolexp(treenode_t *exp);
+operand_t translate_accessexp(treenode_t *exp);
 
 void translate_args(treenode_t *args);
 operand_t get_first_arg(treenode_t *args);
@@ -328,6 +329,7 @@ void translate_stmt_if(treenode_t *exp, treenode_t *stmt)
 {
     int labeltrue = alloc_labelid();
     int labelfalse = alloc_labelid();
+
     translate_cond(exp, labeltrue, labelfalse);
     intercodes_push_back(create_ic_label(labeltrue));
     translate_stmt(stmt);
@@ -406,14 +408,11 @@ operand_t translate_exp(treenode_t *exp)
         return translate_arithbop(child, child3, ICOP_DIV);
     if (!strcmp(child2->name, "ASSIGNOP"))
         return translate_assign(child, child3);
-    if (!strcmp(child2->name, "RELOP"))
+    if (!strcmp(child2->name, "AND") || !strcmp(child2->name, "OR") ||
+        !strcmp(child2->name, "RELOP"))
         return translate_boolexp(exp);
-    if (!strcmp(child2->name, "AND") || !strcmp(child2->name, "OR"))
-        return translate_boolexp(exp);
-    if (!strcmp(child2->name, "DOT"))
-        return translate_access(exp, NULL);
-    if (!strcmp(child2->name, "LB"))
-        return translate_access(exp, NULL);
+    if (!strcmp(child2->name, "DOT") || !strcmp(child2->name, "LB"))
+        return translate_accessexp(exp);
     assert(0);  /* Should not reach here! */
 }
 
@@ -593,6 +592,11 @@ operand_t translate_boolexp(treenode_t *exp)
     intercodes_push_back(create_ic_assign(&op, &one));
     intercodes_push_back(create_ic_label(labelfalse));
     return op;
+}
+
+operand_t translate_accessexp(treenode_t *exp)
+{
+    return translate_access(exp, NULL);
 }
 
 void translate_cond(treenode_t *exp, int labeltrue, int labelfalse)
