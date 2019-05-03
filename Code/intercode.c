@@ -22,7 +22,7 @@ void init_labelid()
 }
 
 int alloc_varid()
-{    
+{
     return free_varid++;
 }
 
