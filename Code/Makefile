@@ -32,12 +32,15 @@ syntax-c: $(YFILE)
 -include $(patsubst %.o, %.d, $(OBJS))
 
 # 定义的一些伪目标
-.PHONY: clean test
+.PHONY: clean test batchtest
 test:
-	./parser ../Test/goldbach.cmm ~/Workspace/irsim/goldbach.ir
-	./parser ../Test/mergesort.cmm ~/Workspace/irsim/mergesort.ir
-	./parser ../Test/sum.cmm ~/Workspace/irsim/sum.ir
-	./parser ../Test/arraystruct.cmm ~/Workspace/irsim/arraystruct.ir
+	./parser ../Test/temp.cmm ../irsim/temp.ir
+
+batchtest:
+	./parser ../Test/goldbach.cmm ../irsim/goldbach.ir
+	./parser ../Test/mergesort.cmm ../irsim/mergesort.ir
+	./parser ../Test/sum.cmm ../irsim/sum.ir
+	./parser ../Test/arraystruct.cmm ../irsim/arraystruct.ir
 
 clean:
 	rm -f parser lex.yy.c syntax.tab.c syntax.tab.h syntax.output
