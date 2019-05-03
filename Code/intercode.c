@@ -129,6 +129,20 @@ int str_to_icop(const char *str)
     return 0;
 }
 
+int complement_rel_icop(int icop)
+{
+    switch (icop) {
+    case ICOP_EQ:  return ICOP_NEQ;
+    case ICOP_NEQ: return ICOP_EQ;
+    case ICOP_L:   return ICOP_GE;
+    case ICOP_LE:  return ICOP_G;
+    case ICOP_G:   return ICOP_LE;
+    case ICOP_GE:  return ICOP_L;
+    default: assert(0); break;
+    }
+    return ICOP_EQ;
+}
+
 typedef struct ic_label {
     int kind;
     int labelid;

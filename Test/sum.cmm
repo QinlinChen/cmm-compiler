@@ -12,7 +12,7 @@ int sum(int begin, int end)
 
 int main()
 {
-    int x = 1, y = 101;
+    int x = 1, y = 1001;
 
     write(sum(x, y));
 

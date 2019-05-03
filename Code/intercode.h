@@ -11,6 +11,8 @@ enum {
     OPERAND_VAR, OPERAND_ADDR, OPERAND_CONST
 };
 
+#define LABEL_FALL  -1
+
 typedef struct operand {
     int kind;
     union {
@@ -46,6 +48,7 @@ enum {
 
 const char *icop_to_str(int icop);
 int str_to_icop(const char *str);
+int complement_rel_icop(int icop);
 
 typedef struct intercode {
     int kind;

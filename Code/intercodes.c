@@ -84,12 +84,12 @@ operand_t get_first_arg(treenode_t *args);
 /* Translate an expression as a condition. */
 void translate_cond(treenode_t *exp, int labeltrue, int labelfalse);
 void translate_cond_not(treenode_t *exp, int labeltrue, int labelfalse);
-void translate_cond_relop(treenode_t *lexp, treenode_t *rexp,
-                          int labeltrue, int labelfalse, int icop);
 void translate_cond_and(treenode_t *lexp, treenode_t *rexp,
                         int labeltrue, int labelfalse);
 void translate_cond_or(treenode_t *lexp, treenode_t *rexp,
                        int labeltrue, int labelfalse);
+void translate_cond_relop(treenode_t *lexp, treenode_t *rexp,
+                          int labeltrue, int labelfalse, int icop);
 void translate_cond_otherwise(treenode_t *exp, int labeltrue, int labelfalse);
 
 /* Translate a memeory access expression and return its address. */
@@ -327,23 +327,19 @@ void translate_stmt(treenode_t *stmt)
 
 void translate_stmt_if(treenode_t *exp, treenode_t *stmt)
 {
-    int labeltrue = alloc_labelid();
     int labelfalse = alloc_labelid();
 
-    translate_cond(exp, labeltrue, labelfalse);
-    intercodes_push_back(create_ic_label(labeltrue));
+    translate_cond(exp, LABEL_FALL, labelfalse);
     translate_stmt(stmt);
     intercodes_push_back(create_ic_label(labelfalse));
 }
 
 void translate_stmt_if_else(treenode_t *exp, treenode_t *stmt1, treenode_t *stmt2)
 {
-    int labeltrue = alloc_labelid();
     int labelfalse = alloc_labelid();
     int labelexit = alloc_labelid();
 
-    translate_cond(exp, labeltrue, labelfalse);
-    intercodes_push_back(create_ic_label(labeltrue));
+    translate_cond(exp, LABEL_FALL, labelfalse);
     translate_stmt(stmt1);
     intercodes_push_back(create_ic_goto(labelexit));
     intercodes_push_back(create_ic_label(labelfalse));
@@ -354,15 +350,13 @@ void translate_stmt_if_else(treenode_t *exp, treenode_t *stmt1, treenode_t *stmt
 void translate_stmt_while(treenode_t *exp, treenode_t *stmt)
 {
     int labelbegin = alloc_labelid();
-    int labeltrue = alloc_labelid();
-    int labelfalse = alloc_labelid();
+    int labelexit = alloc_labelid();
 
     intercodes_push_back(create_ic_label(labelbegin));
-    translate_cond(exp, labeltrue, labelfalse);
-    intercodes_push_back(create_ic_label(labeltrue));
+    translate_cond(exp, LABEL_FALL, labelexit);
     translate_stmt(stmt);
     intercodes_push_back(create_ic_goto(labelbegin));
-    intercodes_push_back(create_ic_label(labelfalse));
+    intercodes_push_back(create_ic_label(labelexit));
 }
 
 operand_t translate_exp(treenode_t *exp)
@@ -579,7 +573,6 @@ operand_t translate_arithbop(treenode_t *lexp, treenode_t *rexp, int icop)
 
 operand_t translate_boolexp(treenode_t *exp)
 {
-    int labeltrue = alloc_labelid();
     int labelfalse = alloc_labelid();
     operand_t zero, one, op;
     init_const_operand(&zero, 0);
@@ -587,8 +580,7 @@ operand_t translate_boolexp(treenode_t *exp)
     init_temp_var(&op);
 
     intercodes_push_back(create_ic_assign(&op, &zero));
-    translate_cond(exp, labeltrue, labelfalse);
-    intercodes_push_back(create_ic_label(labeltrue));
+    translate_cond(exp, LABEL_FALL, labelfalse);
     intercodes_push_back(create_ic_assign(&op, &one));
     intercodes_push_back(create_ic_label(labelfalse));
     return op;
@@ -617,17 +609,17 @@ void translate_cond(treenode_t *exp, int labeltrue, int labelfalse)
 
     treenode_t *child2, *child3;
     if ((child2 = child->next) && (child3 = child2->next)) {
-        if (!strcmp(child2->name, "RELOP")) {
-            translate_cond_relop(child, child3, labeltrue, labelfalse,
-                                 str_to_icop(child2->relop));
-            return;
-        }
         if (!strcmp(child2->name, "AND")) {
             translate_cond_and(child, child3, labeltrue, labelfalse);
             return;
         }
         if (!strcmp(child2->name, "OR")) {
             translate_cond_or(child, child3, labeltrue, labelfalse);
+            return;
+        }
+        if (!strcmp(child2->name, "RELOP")) {
+            translate_cond_relop(child, child3, labeltrue, labelfalse,
+                                 str_to_icop(child2->relop));
             return;
         }
     }
@@ -637,6 +629,26 @@ void translate_cond(treenode_t *exp, int labeltrue, int labelfalse)
 void translate_cond_not(treenode_t *exp, int labeltrue, int labelfalse)
 {
     translate_cond(exp, labelfalse, labeltrue);
+}
+
+void translate_cond_and(treenode_t *lexp, treenode_t *rexp,
+                        int labeltrue, int labelfalse)
+{
+    int labelid = (labelfalse == LABEL_FALL ? alloc_labelid() : labelfalse);
+    translate_cond(lexp, LABEL_FALL, labelid);
+    translate_cond(rexp, labeltrue, labelfalse);
+    if (labelfalse == LABEL_FALL)
+        intercodes_push_back(create_ic_label(labelid));
+}
+
+void translate_cond_or(treenode_t *lexp, treenode_t *rexp,
+                       int labeltrue, int labelfalse)
+{
+    int labelid = (labeltrue == LABEL_FALL ? alloc_labelid() : labeltrue);
+    translate_cond(lexp, labelid, LABEL_FALL);
+    translate_cond(rexp, labeltrue, labelfalse);
+    if (labeltrue == LABEL_FALL)
+        intercodes_push_back(create_ic_label(labelid));
 }
 
 void translate_cond_relop(treenode_t *lexp, treenode_t *rexp,
@@ -658,30 +670,26 @@ void translate_cond_relop(treenode_t *lexp, treenode_t *rexp,
         case ICOP_GE:  cond = (lhs.val >= rhs.val); break;
         default: assert(0); break;
         }
-        intercodes_push_back(create_ic_goto((cond ? labeltrue : labelfalse)));
+        if (labeltrue != LABEL_FALL && labelfalse != LABEL_FALL)
+            intercodes_push_back(create_ic_goto((cond? labeltrue : labelfalse)));
+        else if (labeltrue != LABEL_FALL && cond)
+            intercodes_push_back(create_ic_goto(labeltrue));
+        else if (labelfalse != LABEL_FALL && !cond)
+            intercodes_push_back(create_ic_goto(labelfalse));
         return;
     }
 
-    intercodes_push_back(create_ic_condgoto(icop, &lhs, &rhs, labeltrue));
-    intercodes_push_back(create_ic_goto(labelfalse));
-}
-
-void translate_cond_and(treenode_t *lexp, treenode_t *rexp,
-                        int labeltrue, int labelfalse)
-{
-    int labelid = alloc_labelid();
-    translate_cond(lexp, labelid, labelfalse);
-    intercodes_push_back(create_ic_label(labelid));
-    translate_cond(rexp, labeltrue, labelfalse);
-}
-
-void translate_cond_or(treenode_t *lexp, treenode_t *rexp,
-                       int labeltrue, int labelfalse)
-{
-    int labelid = alloc_labelid();
-    translate_cond(lexp, labeltrue, labelid);
-    intercodes_push_back(create_ic_label(labelid));
-    translate_cond(rexp, labeltrue, labelfalse);
+    if (labeltrue != LABEL_FALL && labelfalse != LABEL_FALL) {
+        intercodes_push_back(create_ic_condgoto(icop, &lhs, &rhs, labeltrue));
+        intercodes_push_back(create_ic_goto(labelfalse));
+    }
+    else if (labeltrue != LABEL_FALL) {
+        intercodes_push_back(create_ic_condgoto(icop, &lhs, &rhs, labeltrue));
+    }
+    else if (labelfalse != LABEL_FALL) {
+        icop = complement_rel_icop(icop);
+        intercodes_push_back(create_ic_condgoto(icop, &lhs, &rhs, labelfalse));
+    }
 }
 
 void translate_cond_otherwise(treenode_t *exp, int labeltrue, int labelfalse)
@@ -690,14 +698,27 @@ void translate_cond_otherwise(treenode_t *exp, int labeltrue, int labelfalse)
     op = try_deref(&op);
 
     if (is_const_operand(&op)) {
-        intercodes_push_back(create_ic_goto((op.val ? labeltrue : labelfalse)));
+        if (labeltrue != LABEL_FALL && labelfalse != LABEL_FALL)
+            intercodes_push_back(create_ic_goto((op.val ? labeltrue : labelfalse)));
+        else if (labeltrue != LABEL_FALL && op.val)
+            intercodes_push_back(create_ic_goto(labeltrue));
+        else if (labelfalse != LABEL_FALL && !op.val)
+            intercodes_push_back(create_ic_goto(labelfalse));
         return;
     }
 
     operand_t zero;
     init_const_operand(&zero, 0);
-    intercodes_push_back(create_ic_condgoto(ICOP_NEQ, &op, &zero, labeltrue));
-    intercodes_push_back(create_ic_goto(labelfalse));
+    if (labeltrue != LABEL_FALL && labelfalse != LABEL_FALL) {
+        intercodes_push_back(create_ic_condgoto(ICOP_NEQ, &op, &zero, labeltrue));
+        intercodes_push_back(create_ic_goto(labelfalse));
+    }
+    else if (labeltrue != LABEL_FALL) {
+        intercodes_push_back(create_ic_condgoto(ICOP_NEQ, &op, &zero, labeltrue));
+    }
+    else if (labelfalse != LABEL_FALL) {
+        intercodes_push_back(create_ic_condgoto(ICOP_EQ, &op, &zero, labelfalse));
+    }
 }
 
 operand_t translate_access(treenode_t *exp, type_t **ret)
