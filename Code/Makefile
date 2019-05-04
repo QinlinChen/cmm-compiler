@@ -39,8 +39,8 @@ test:
 batchtest:
 	./parser ../Test/goldbach.cmm ../irsim/goldbach.ir
 	./parser ../Test/mergesort.cmm ../irsim/mergesort.ir
-	./parser ../Test/sum.cmm ../irsim/sum.ir
 	./parser ../Test/arraystruct.cmm ../irsim/arraystruct.ir
+	./parser ../Test/sum.cmm ../irsim/sum.ir
 
 clean:
 	rm -f parser lex.yy.c syntax.tab.c syntax.tab.h syntax.output
