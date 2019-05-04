@@ -5,5 +5,4 @@ parser
 *.output
 .vscode
 *.ir
-irsim
 temp.cmm
