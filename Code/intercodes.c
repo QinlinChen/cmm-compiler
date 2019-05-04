@@ -121,7 +121,7 @@ void intercodes_translate(treenode_t *root)
 
     intercodes_translate_r(root);
 
-    fprint_intercodes(stdout);
+    // fprint_intercodes(stdout);
 }
 
 void intercodes_translate_r(treenode_t *node)
