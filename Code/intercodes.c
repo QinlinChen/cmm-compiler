@@ -637,6 +637,16 @@ operand_t translate_unary_minus(treenode_t *exp, operand_t *target)
     return var;
 }
 
+void check_zero_divisor(int lineno, operand_t *divisor)
+{
+    assert(divisor);
+    assert(is_const_operand(divisor));
+    if (divisor->val == 0) {
+        translate_error(lineno, "divide zero error.");
+        exit(0);
+    }
+}
+
 operand_t translate_arithbop(treenode_t *lexp, treenode_t *rexp, int icop,
                              operand_t *target)
 {
@@ -652,11 +662,17 @@ operand_t translate_arithbop(treenode_t *lexp, treenode_t *rexp, int icop,
     if (is_const_operand(&lhs) && is_const_operand(&rhs)) {
         int val;
         switch (icop) {
-        case ICOP_ADD: val = lhs.val + rhs.val; break;
-        case ICOP_SUB: val = lhs.val - rhs.val; break;
-        case ICOP_MUL: val = lhs.val * rhs.val; break;
-        case ICOP_DIV: val = lhs.val / rhs.val; break;
-        default: assert(0); break;
+        case ICOP_ADD:
+            val = lhs.val + rhs.val; break;
+        case ICOP_SUB:
+            val = lhs.val - rhs.val; break;
+        case ICOP_MUL:
+            val = lhs.val * rhs.val; break;
+        case ICOP_DIV:
+            check_zero_divisor(rexp->lineno, &rhs);
+            val = lhs.val / rhs.val; break;
+        default:
+            assert(0); break;
         }
         init_const_operand(&var, val);
         if (target) {
