@@ -727,7 +727,7 @@ void translate_cond(treenode_t *exp, int labeltrue, int labelfalse)
         return;
     }
     if (!strcmp(child->name, "NOT")) {
-        translate_cond_not(exp->next, labeltrue, labelfalse);
+        translate_cond_not(child->next, labeltrue, labelfalse);
         return;
     }
 
