@@ -1,5 +1,4 @@
 #include "intercodes.h"
-#include "intercode.h"
 #include "semantics.h"
 #include "syntax.tab.h"
 
@@ -29,18 +28,31 @@ void fprint_intercodes(FILE *fp)
     fprint_iclist(fp, &intercodes);
 }
 
+iclist_t *get_intercodes()
+{
+    return &intercodes;
+}
+
 /* ------------------------------------ *
  *           translate errors           *
  * ------------------------------------ */
 
+static int _has_translate_error = 0;
+
 void translate_error(int lineno, const char *msg, ...)
 {
+    _has_translate_error = 1;
     printf("Line %d: ", lineno);
     va_list ap;
     va_start(ap, msg);
     vprintf(msg, ap);
     va_end(ap);
     printf("\n");
+}
+
+int has_translate_error()
+{
+    return _has_translate_error;
 }
 
 /* ------------------------------------ *
@@ -120,8 +132,6 @@ void intercodes_translate(treenode_t *root)
     add_builtin_func();
 
     intercodes_translate_r(root);
-
-    // fprint_intercodes(stdout);
 }
 
 void intercodes_translate_r(treenode_t *node)

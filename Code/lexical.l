@@ -15,7 +15,7 @@ int yycolumn = 1;
     yylloc.last_column = yycolumn + yyleng - 1; \
     yycolumn += yyleng;
 
-extern int has_error;
+extern int has_syntax_error;
 
 void handle_line_comment();
 void handle_block_comment();
@@ -156,5 +156,5 @@ void handle_undefined_char()
 {
     printf("Error type A at Line %d: Mysterious characters \'%s\'\n",
            yylineno, yytext);
-    has_error = 1;
+    has_syntax_error = 1;
 }
