@@ -19,6 +19,7 @@ typedef struct operand {
         int varid;
         int val;
     };
+    int is_temp;
 } operand_t;
 
 void init_varid();
@@ -122,7 +123,7 @@ typedef struct ic_return {
 
 typedef struct ic_dec {
     int kind;
-    int varid;
+    operand_t var;
     int size;
 } ic_dec_t;
 
@@ -134,17 +135,17 @@ typedef struct ic_arg {
 typedef struct ic_call {
     int kind;
     const char *fname;
-    int retvarid;
+    operand_t ret;
 } ic_call_t;
 
 typedef struct ic_param {
     int kind;
-    int varid;
+    operand_t var;
 } ic_param_t;
 
 typedef struct ic_read {
     int kind;
-    int varid;
+    operand_t var;
 } ic_read_t;
 
 typedef struct ic_write {
@@ -164,11 +165,11 @@ intercode_t *create_ic_goto(int labelid);
 intercode_t *create_ic_condgoto(int relop, operand_t *lhs, operand_t *rhs,
                                 int labelid);
 intercode_t *create_ic_return(operand_t *ret);
-intercode_t *create_ic_dec(int varid, int size);
+intercode_t *create_ic_dec(operand_t *var, int size);
 intercode_t *create_ic_arg(operand_t *arg);
-intercode_t *create_ic_call(const char *fname, int retvarid);
-intercode_t *create_ic_param(int varid);
-intercode_t *create_ic_read(int varid);
+intercode_t *create_ic_call(const char *fname, operand_t *ret);
+intercode_t *create_ic_param(operand_t *var);
+intercode_t *create_ic_read(operand_t *var);
 intercode_t *create_ic_write(operand_t *var);
 
 void fprint_intercode(FILE *fp, intercode_t *ic);

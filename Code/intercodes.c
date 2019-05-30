@@ -202,7 +202,9 @@ void gen_funcdef(const char *fname, fieldlist_t *params)
             assert(0);
             return;
         }
-        intercodes_push_back(create_ic_param(symbol->id));
+        operand_t var;
+        init_var_operand(&var, symbol->id);
+        intercodes_push_back(create_ic_param(&var));
     }
 }
 
@@ -280,7 +282,9 @@ void translate_dec(treenode_t *dec, type_t *spec)
     checked_symbol_table_add_var(&symbol);
     if (symbol.type->kind != TYPE_BASIC) {
         assert(symbol.type->kind != TYPE_FUNC);
-        intercodes_push_back(create_ic_dec(symbol.id, symbol.type->width));
+        operand_t var;
+        init_var_operand(&var, symbol.id);
+        intercodes_push_back(create_ic_dec(&var, symbol.type->width));
     }
 
     treenode_t *assignop = var_dec->next;
@@ -484,11 +488,11 @@ operand_t translate_func_call(treenode_t *id, treenode_t *args, operand_t *targe
     if (!strcmp(id->id, "read")) {
         assert(!args);
         if (target) {
-            intercodes_push_back(create_ic_read(target->varid));
+            intercodes_push_back(create_ic_read(target));
             return *target;
         }
         init_temp_var(&ret);
-        intercodes_push_back(create_ic_read(ret.varid));
+        intercodes_push_back(create_ic_read(&ret));
         return ret;
     }
 
@@ -508,11 +512,11 @@ operand_t translate_func_call(treenode_t *id, treenode_t *args, operand_t *targe
     if (args)
         translate_args(args);
     if (target) {
-        intercodes_push_back(create_ic_call(id->id, target->varid));
+        intercodes_push_back(create_ic_call(id->id, target));
         return *target;
     }
     init_temp_var(&ret);
-    intercodes_push_back(create_ic_call(id->id, ret.varid));
+    intercodes_push_back(create_ic_call(id->id, &ret));
     return ret;
 }
 

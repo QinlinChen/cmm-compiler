@@ -36,6 +36,7 @@ void init_var_operand(operand_t *op, int varid)
     assert(op);
     op->kind = OPERAND_VAR;
     op->varid = varid;
+    op->is_temp = 0;
 }
 
 void init_addr_operand(operand_t *op, int varid)
@@ -43,6 +44,7 @@ void init_addr_operand(operand_t *op, int varid)
     assert(op);
     op->kind = OPERAND_ADDR;
     op->varid = varid;
+    op->is_temp = 0;
 }
 
 void init_const_operand(operand_t *op, int val)
@@ -50,16 +52,23 @@ void init_const_operand(operand_t *op, int val)
     assert(op);
     op->kind = OPERAND_CONST;
     op->val = val;
+    op->is_temp = 0;
 }
 
 void init_temp_var(operand_t *op)
 {
-    init_var_operand(op, alloc_varid());
+    assert(op);
+    op->kind = OPERAND_VAR;
+    op->varid = alloc_varid();
+    op->is_temp = 1;
 }
 
 void init_temp_addr(operand_t *op)
 {
-    init_addr_operand(op, alloc_varid());
+    assert(op);
+    op->kind = OPERAND_ADDR;
+    op->varid = alloc_varid();
+    op->is_temp = 1;
 }
 
 int is_const_operand(operand_t *op)
@@ -72,7 +81,7 @@ void fprint_operand(FILE *fp, operand_t *op)
     switch (op->kind) {
     case OPERAND_VAR: /* fall through */
     case OPERAND_ADDR:
-        fprintf(fp, "v%d", op->varid); break;
+        fprintf(fp, "%c%d", (op->is_temp ? 't' : 'v'), op->varid); break;
     case OPERAND_CONST:
         fprintf(fp, "#%d", op->val); break;
     default:
@@ -260,12 +269,12 @@ intercode_t *create_ic_return(operand_t *ret)
     return (intercode_t *)ic;
 }
 
-intercode_t *create_ic_dec(int varid, int size)
+intercode_t *create_ic_dec(operand_t *var, int size)
 {
     ic_dec_t *ic = malloc(sizeof(ic_dec_t));
     assert(ic);
     ic->kind = IC_DEC;
-    ic->varid = varid;
+    ic->var = *var;
     ic->size = size;
     return (intercode_t *)ic;
 }
@@ -280,32 +289,32 @@ intercode_t *create_ic_arg(operand_t *arg)
     return (intercode_t *)ic;
 }
 
-intercode_t *create_ic_call(const char *fname, int retvarid)
+intercode_t *create_ic_call(const char *fname, operand_t *ret)
 {
     assert(fname);
     ic_call_t *ic = malloc(sizeof(ic_call_t));
     assert(ic);
     ic->kind = IC_CALL;
     ic->fname = fname;
-    ic->retvarid = retvarid;
+    ic->ret = *ret;
     return (intercode_t *)ic;
 }
 
-intercode_t *create_ic_param(int varid)
+intercode_t *create_ic_param(operand_t *var)
 {
     ic_param_t *ic = malloc(sizeof(ic_param_t));
     assert(ic);
     ic->kind = IC_PARAM;
-    ic->varid = varid;
+    ic->var = *var;
     return (intercode_t *)ic;
 }
 
-intercode_t *create_ic_read(int varid)
+intercode_t *create_ic_read(operand_t *var)
 {
     ic_read_t *ic = malloc(sizeof(ic_read_t));
     assert(ic);
     ic->kind = IC_READ;
-    ic->varid = varid;
+    ic->var = *var;
     return (intercode_t *)ic;
 }
 
@@ -388,7 +397,9 @@ void fprint_ic_return(FILE *fp, ic_return_t *ic)
 
 void fprint_ic_dec(FILE *fp, ic_dec_t *ic)
 {
-    fprintf(fp, "DEC v%d %d", ic->varid, ic->size);
+    fprintf(fp, "DEC ");
+    fprint_operand(fp, &ic->var);
+    fprintf(fp, " %d", ic->size);
 }
 
 void fprint_ic_arg(FILE *fp, ic_arg_t *ic)
@@ -399,17 +410,20 @@ void fprint_ic_arg(FILE *fp, ic_arg_t *ic)
 
 void fprint_ic_call(FILE *fp, ic_call_t *ic)
 {
-    fprintf(fp, "v%d := CALL %s", ic->retvarid, ic->fname);
+    fprint_operand(fp, &ic->ret);
+    fprintf(fp, " := CALL %s", ic->fname);
 }
 
 void fprint_ic_param(FILE *fp, ic_param_t *ic)
 {
-    fprintf(fp, "PARAM v%d", ic->varid);
+    fprintf(fp, "PARAM ");
+    fprint_operand(fp, &ic->var);
 }
 
 void fprint_ic_read(FILE *fp, ic_read_t *ic)
 {
-    fprintf(fp, "READ v%d", ic->varid);
+    fprintf(fp, "READ ");
+    fprint_operand(fp, &ic->var);
 }
 
 void fprint_ic_write(FILE *fp, ic_write_t *ic)

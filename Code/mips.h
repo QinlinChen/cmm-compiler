@@ -3,6 +3,6 @@
 
 #include "intercodes.h"
 
-void genmips(FILE *fp);
+void gen_mips(FILE *fp);
 
 #endif

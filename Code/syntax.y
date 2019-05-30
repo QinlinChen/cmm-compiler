@@ -2,6 +2,7 @@
 #include "syntaxtree.h"
 #include "semantics.h"
 #include "intercodes.h"
+#include "mips.h"
 extern FILE *fout;
 
 #define YYSTYPE treenode_t *
@@ -65,6 +66,7 @@ Program: ExtDefList {
                 intercodes_translate($$);
                 if (!has_translate_error()) {
                     fprint_intercodes(fout);
+                    gen_mips(stdout);
                 }
             }
         }
