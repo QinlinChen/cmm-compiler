@@ -1,7 +1,7 @@
 #ifndef _MIPS_H
 #define _MIPS_H
 
-#include "intercodes.h"
+#include <stdio.h>
 
 void gen_mips(FILE *fp);
 

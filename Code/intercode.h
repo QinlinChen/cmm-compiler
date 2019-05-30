@@ -34,6 +34,8 @@ void init_temp_var(operand_t *op);
 void init_temp_addr(operand_t *op);
 
 int is_const_operand(operand_t *op);
+int operand_is_equal(operand_t *lhs, operand_t *rhs);
+
 void fprint_operand(FILE *fp, operand_t *op);
 
 /* ------------------------------------ *

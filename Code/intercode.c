@@ -76,6 +76,22 @@ int is_const_operand(operand_t *op)
     return op->kind == OPERAND_CONST;
 }
 
+int operand_is_equal(operand_t *lhs, operand_t *rhs)
+{
+    if (lhs->kind != rhs->kind)
+        return 0;
+    switch (lhs->kind) {
+    case OPERAND_ADDR: /* fall through */
+    case OPERAND_VAR:
+        return lhs->varid == rhs->varid;
+    case OPERAND_CONST:
+        return lhs->val == rhs->val;
+    default:
+        assert(0); break;
+    }
+    return 0;
+}
+
 void fprint_operand(FILE *fp, operand_t *op)
 {
     switch (op->kind) {
