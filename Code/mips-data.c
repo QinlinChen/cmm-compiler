@@ -5,49 +5,6 @@
 #include <assert.h>
 
 /* ------------------------------------ *
- *            reg info table            *
- * ------------------------------------ */
-
-static reginfo_t reginfo_table[REG_SIZE];
-
-const char *get_regalias(int reg)
-{
-    static const char *regalias[REG_SIZE] = {
-        "zero", "at",
-        "v0", "v1", "a0", "a1", "a2", "a3",
-        "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7",
-        "s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7",
-        "t8", "t9", "k0", "k1",
-        "gp", "sp", "fp", "ra"
-    };
-
-    return regalias[reg];
-}
-
-void init_reginfo_table()
-{
-    memset(&reginfo_table, 0, sizeof(reginfo_table));
-    for (int i = R_T0; i <= R_T9; ++i) {
-        reginfo_table[i].is_empty = 1;
-    }
-}
-
-void reginfo_table_clear()
-{
-    init_reginfo_table();
-}
-
-void print_reginfo_table()
-{
-    for (int i = R_T0; i <= R_T9; ++i) {
-        printf("%s: ", get_regalias(i));
-        if (!reginfo_table[i].is_empty)
-            fprint_operand(stdout, &reginfo_table[i].var_loaded);
-        printf("\n");
-    }
-}
-
-/* ------------------------------------ *
  *            var info list             *
  * ------------------------------------ */
 
@@ -146,41 +103,58 @@ void print_varinfolist()
     }
 }
 
+int varinfolist_try_add_var(operand_t *var, int size, int offset);
+void collect_varinfo_param(ic_param_t *ic, int n_param);
+int collect_varinfo_dec(ic_dec_t *ic, int offset);
+int collect_varinfo_assign(ic_assign_t *ic, int offset);
+int collect_varinfo_arithbop(ic_arithbop_t *ic, int offset);
+int collect_varinfo_ref(ic_ref_t *ic, int offset);
+int collect_varinfo_dref(ic_dref_t *ic, int offset);
+int collect_varinfo_drefassign(ic_drefassign_t *ic, int offset);
+int collect_varinfo_condgoto(ic_condgoto_t *ic, int offset);
+int collect_varinfo_return(ic_return_t *ic, int offset);
+int collect_varinfo_arg(ic_arg_t *ic, int offset);
+int collect_varinfo_call(ic_call_t *ic, int offset);
+int collect_varinfo_read(ic_read_t *ic, int offset);
+int collect_varinfo_write(ic_write_t *ic, int offset);
+
 int collect_varinfo(iclistnode_t *funcdefnode)
 {
+    assert(funcdefnode->ic->kind == IC_FUNCDEF);
     int offset = 0;
+    int n_param = 1;
 
     for (iclistnode_t *cur = funcdefnode->next; cur != NULL; cur = cur->next) {
         intercode_t *ic = cur->ic;
         if (ic->kind == IC_FUNCDEF)
             break;
         switch (ic->kind) {
+        case IC_PARAM:
+            collect_varinfo_param((ic_param_t *)ic, n_param++); break;
+        case IC_DEC:
+            offset = collect_varinfo_dec((ic_dec_t *)ic, offset); break;
         case IC_ASSIGN:
             offset = collect_varinfo_assign((ic_assign_t *)ic, offset); break;
         case IC_ARITHBOP:
-            break;
+            offset = collect_varinfo_arithbop((ic_arithbop_t *)ic, offset); break;
         case IC_REF:
-            break;
+            offset = collect_varinfo_ref((ic_ref_t *)ic, offset); break;
         case IC_DREF:
-            break;
+            offset = collect_varinfo_dref((ic_dref_t *)ic, offset); break;
         case IC_DREFASSIGN:
-            break;
+            offset = collect_varinfo_drefassign((ic_drefassign_t *)ic, offset); break;
         case IC_CONDGOTO:
-            break;
+            offset = collect_varinfo_condgoto((ic_condgoto_t *)ic, offset); break;
         case IC_RETURN:
-            break;
-        case IC_DEC:
-            break;
+            offset = collect_varinfo_return((ic_return_t *)ic, offset); break;
         case IC_ARG:
-            break;
+            offset = collect_varinfo_arg((ic_arg_t *)ic, offset); break;
         case IC_CALL:
-            break;
-        case IC_PARAM:
-            break;
+            offset = collect_varinfo_call((ic_call_t *)ic, offset); break;
         case IC_READ:
-            break;
+            offset = collect_varinfo_read((ic_read_t *)ic, offset); break;
         case IC_WRITE:
-            break;
+            offset = collect_varinfo_write((ic_write_t *)ic, offset); break;
         case IC_FUNCDEF:
             assert(0); break;
         default:
@@ -188,7 +162,7 @@ int collect_varinfo(iclistnode_t *funcdefnode)
         }
     }
 
-    return 0 - offset; /* the total size of local variables */
+    return offset; /* the total offset that should be added to $SP. */
 }
 
 int varinfolist_try_add_var(operand_t *var, int size, int offset)
@@ -205,9 +179,129 @@ int varinfolist_try_add_var(operand_t *var, int size, int offset)
     return offset;
 }
 
+void collect_varinfo_param(ic_param_t *ic, int n_param)
+{
+    varinfo_t *varinfo;
+
+    if (n_param <= 4)
+        varinfo = create_varinfo(&ic->var, R_A0 + n_param - 1, 0);
+    else
+        varinfo = create_varinfo(&ic->var, R_FP, 8 + 4 * (n_param - 5));
+    varinfolist_push_back(varinfo);
+}
+
+int collect_varinfo_dec(ic_dec_t *ic, int offset)
+{
+    return varinfolist_try_add_var(&ic->var, ic->size, offset);
+}
+
 int collect_varinfo_assign(ic_assign_t *ic, int offset)
 {
     offset = varinfolist_try_add_var(&ic->lhs, 4, offset);
     offset = varinfolist_try_add_var(&ic->rhs, 4, offset);
     return offset;
+}
+
+int collect_varinfo_arithbop(ic_arithbop_t *ic, int offset)
+{
+    offset = varinfolist_try_add_var(&ic->lhs, 4, offset);
+    offset = varinfolist_try_add_var(&ic->rhs, 4, offset);
+    offset = varinfolist_try_add_var(&ic->target, 4, offset);
+    return offset;
+}
+
+int collect_varinfo_ref(ic_ref_t *ic, int offset)
+{
+    offset = varinfolist_try_add_var(&ic->lhs, 4, offset);
+    offset = varinfolist_try_add_var(&ic->rhs, 4, offset);
+    return offset;
+}
+
+int collect_varinfo_dref(ic_dref_t *ic, int offset)
+{
+    offset = varinfolist_try_add_var(&ic->lhs, 4, offset);
+    offset = varinfolist_try_add_var(&ic->rhs, 4, offset);
+    return offset;
+}
+
+int collect_varinfo_drefassign(ic_drefassign_t *ic, int offset)
+{
+    offset = varinfolist_try_add_var(&ic->lhs, 4, offset);
+    offset = varinfolist_try_add_var(&ic->rhs, 4, offset);
+    return offset;
+}
+
+int collect_varinfo_condgoto(ic_condgoto_t *ic, int offset)
+{
+    offset = varinfolist_try_add_var(&ic->lhs, 4, offset);
+    offset = varinfolist_try_add_var(&ic->rhs, 4, offset);
+    return offset;
+}
+
+int collect_varinfo_return(ic_return_t *ic, int offset)
+{
+    return varinfolist_try_add_var(&ic->ret, 4, offset);
+}
+
+int collect_varinfo_arg(ic_arg_t *ic, int offset)
+{
+    return varinfolist_try_add_var(&ic->arg, 4, offset);
+}
+
+int collect_varinfo_call(ic_call_t *ic, int offset)
+{
+    return varinfolist_try_add_var(&ic->ret, 4, offset);
+}
+
+int collect_varinfo_read(ic_read_t *ic, int offset)
+{
+    return varinfolist_try_add_var(&ic->var, 4, offset);
+}
+
+int collect_varinfo_write(ic_write_t *ic, int offset)
+{
+    return varinfolist_try_add_var(&ic->var, 4, offset);
+}
+
+/* ------------------------------------ *
+ *            reg info table            *
+ * ------------------------------------ */
+
+static reginfo_t reginfo_table[REG_SIZE];
+
+const char *get_regalias(int reg)
+{
+    static const char *regalias[REG_SIZE] = {
+        "zero", "at",
+        "v0", "v1", "a0", "a1", "a2", "a3",
+        "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7",
+        "s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7",
+        "t8", "t9", "k0", "k1",
+        "gp", "sp", "fp", "ra"
+    };
+
+    return regalias[reg];
+}
+
+void init_reginfo_table()
+{
+    memset(&reginfo_table, 0, sizeof(reginfo_table));
+    for (int i = R_T0; i <= R_T9; ++i) {
+        reginfo_table[i].is_empty = 1;
+    }
+}
+
+void reginfo_table_clear()
+{
+    init_reginfo_table();
+}
+
+void print_reginfo_table()
+{
+    for (int i = R_T0; i <= R_T9; ++i) {
+        printf("%s: ", get_regalias(i));
+        if (!reginfo_table[i].is_empty)
+            fprint_operand(stdout, &reginfo_table[i].var_loaded);
+        printf("\n");
+    }
 }

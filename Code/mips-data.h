@@ -4,6 +4,32 @@
 #include "intercodes.h"
 
 /* ------------------------------------ *
+ *            var info list             *
+ * ------------------------------------ */
+
+typedef struct varinfo
+{
+    operand_t var;
+    /* This field indicates which reg the var is stored.
+     * If reg is R_SP or R_FP, offset is used to indicate
+     * its relative position in the stack. */
+    int reg;
+    int offset;
+} varinfo_t;
+
+varinfo_t *create_varinfo(operand_t *var, int reg, int offset);
+void print_varinfo(varinfo_t *vi);
+
+void init_varinfolist();
+void varinfolist_clear();
+void varinfolist_push_back(varinfo_t *vi);
+varinfo_t *varinfolist_find(operand_t *var);
+void print_varinfolist();
+
+int collect_varinfo(iclistnode_t *funcdefnode);
+
+
+/* ------------------------------------ *
  *            reg info table            *
  * ------------------------------------ */
 
@@ -29,32 +55,5 @@ const char *get_regalias(int reg);
 void init_reginfo_table();
 void reginfo_table_clear();
 void print_reginfo_table();
-
-/* ------------------------------------ *
- *            var info list             *
- * ------------------------------------ */
-
-typedef struct varinfo
-{
-    operand_t var;
-    /* This field indicates which reg the var is stored.
-     * If reg is R_SP or R_FP, offset is used to indicate
-     * its relative position in the stack. */
-    int reg;
-    int offset;
-} varinfo_t;
-
-varinfo_t *create_varinfo(operand_t *var, int reg, int offset);
-void print_varinfo(varinfo_t *vi);
-
-void init_varinfolist();
-void varinfolist_clear();
-void varinfolist_push_back(varinfo_t *vi);
-varinfo_t *varinfolist_find(operand_t *var);
-void print_varinfolist();
-
-int varinfolist_try_add_var(operand_t *var, int size, int offset);
-int collect_varinfo(iclistnode_t *funcdefnode);
-int collect_varinfo_assign(ic_assign_t *ic, int offset);
 
 #endif
