@@ -104,7 +104,7 @@ void print_varinfolist()
 }
 
 int varinfolist_try_add_var(operand_t *var, int size, int offset);
-void collect_varinfo_param(ic_param_t *ic, int n_param);
+int collect_varinfo_param(ic_param_t *ic, int n_param, int offset);
 int collect_varinfo_dec(ic_dec_t *ic, int offset);
 int collect_varinfo_assign(ic_assign_t *ic, int offset);
 int collect_varinfo_arithbop(ic_arithbop_t *ic, int offset);
@@ -130,7 +130,7 @@ int collect_varinfo(iclistnode_t *funcdefnode)
             break;
         switch (ic->kind) {
         case IC_PARAM:
-            collect_varinfo_param((ic_param_t *)ic, n_param++); break;
+            offset = collect_varinfo_param((ic_param_t *)ic, n_param++, offset); break;
         case IC_DEC:
             offset = collect_varinfo_dec((ic_dec_t *)ic, offset); break;
         case IC_ASSIGN:
@@ -170,8 +170,7 @@ int varinfolist_try_add_var(operand_t *var, int size, int offset)
     if (is_const_operand(var))
         return offset;
 
-    varinfo_t *varinfo = varinfolist_find(var);
-    if (varinfo)
+    if (varinfolist_find(var))
         return offset;
     
     offset -= size;
@@ -179,20 +178,16 @@ int varinfolist_try_add_var(operand_t *var, int size, int offset)
     return offset;
 }
 
-void collect_varinfo_param(ic_param_t *ic, int n_param)
+int collect_varinfo_param(ic_param_t *ic, int n_param, int offset)
 {
-    varinfo_t *varinfo;
-
     if (n_param <= 4) {
-        int reg = R_A0 + n_param - 1;
-        varinfo = create_varinfo(&ic->var, reg, 0);
-        reginfo_table_alloc_reg(reg, &ic->var);
-        reginfo_table_lock(reg);
+        reginfo_table_alloc_reg(R_A0 + n_param - 1, &ic->var);
+        return varinfolist_try_add_var(&ic->var, 4, offset);
     }
     else {
-        varinfo = create_varinfo(&ic->var, R_FP, 8 + 4 * (n_param - 5));
+        varinfolist_push_back(create_varinfo(&ic->var, R_FP, 8 + 4 * (n_param - 5)));
+        return offset;
     }
-    varinfolist_push_back(varinfo);
 }
 
 int collect_varinfo_dec(ic_dec_t *ic, int offset)
@@ -332,6 +327,11 @@ void reginfo_table_unlock(int reg)
     reginfo_table[reg].is_locked = 0;
 }
 
+int reginfo_table_is_empty(int reg)
+{
+    return reginfo_table[reg].is_empty;
+}
+
 int reginfo_table_find_var(operand_t *var)
 {
     for (int reg = R_A0; reg <= R_T9; ++reg)
@@ -341,9 +341,12 @@ int reginfo_table_find_var(operand_t *var)
     return R_NONE;
 }
 
+#define REG_BEGIN   R_T0
+#define REG_END     R_T9
+
 int reginfo_table_find_empty()
 {
-    for (int reg = R_T0; reg <= R_T9; ++reg)
+    for (int reg = REG_BEGIN; reg <= REG_END; ++reg)
         if (reginfo_table[reg].is_empty)
             return reg;
     return R_NONE;
@@ -354,7 +357,7 @@ int reginfo_table_find_expellable()
     int best_reg = R_NONE;
     int best_score = 0;
 
-    for (int reg = R_T0; reg <= R_T9; ++reg) {
+    for (int reg = REG_BEGIN; reg <= REG_END; ++reg) {
         if (!reginfo_table[reg].is_empty && !reginfo_table[reg].is_locked) {
             if (is_const_operand(&reginfo_table[reg].var_loaded)) {
                 if (best_score < 3) {

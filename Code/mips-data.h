@@ -59,6 +59,7 @@ void print_reginfo_table();
 
 void reginfo_table_lock(int reg);
 void reginfo_table_unlock(int reg);
+int reginfo_table_is_empty(int reg);
 int reginfo_table_find_var(operand_t *var);
 int reginfo_table_find_empty();
 int reginfo_table_find_expellable();

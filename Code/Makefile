@@ -34,13 +34,13 @@ syntax-c: $(YFILE)
 # 定义的一些伪目标
 .PHONY: clean test batchtest
 test:
-	./parser ../Test/temp.cmm ../../temp.a
+	./parser ../Test/temp.cmm ../../temp.s
 
 batchtest:
-	./parser ../Test/goldbach.cmm ../irsim/goldbach.ir
-	./parser ../Test/mergesort.cmm ../irsim/mergesort.ir
-	./parser ../Test/arraystruct.cmm ../irsim/arraystruct.ir
-	./parser ../Test/sum.cmm ../irsim/sum.ir
+	./parser ../Test/goldbach.cmm ../../goldbach.s
+	./parser ../Test/mergesort.cmm ../../mergesort.s
+	./parser ../Test/arraystruct.cmm ../../arraystruct.s
+	./parser ../Test/sum.cmm ../../sum.s
 
 clean:
 	rm -f parser lex.yy.c syntax.tab.c syntax.tab.h syntax.output

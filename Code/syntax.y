@@ -66,6 +66,7 @@ Program: ExtDefList {
                 intercodes_translate($$);
                 if (!has_translate_error()) {
                     gen_mips(fout);
+                    fprint_intercodes(stdout);
                 }
             }
         }
