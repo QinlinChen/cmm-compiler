@@ -425,7 +425,7 @@ iclistnode_t *gen_mips_args(FILE *fp, iclistnode_t *cur)
 
 iclistnode_t *gen_mips_call(FILE *fp, iclistnode_t *cur)
 {
-    ic_call_t *ic = (ic_call_t *)cur->next;
+    ic_call_t *ic = (ic_call_t *)cur->ic;
 
     gen_mips_writeback_vars(fp);
 
@@ -615,6 +615,9 @@ void gen_mips_store_var(FILE *fp, int reg, operand_t *var)
         return;
 
     varinfo_t *varinfo = varinfolist_find(var);
+    if (!varinfo) {
+        fprint_operand(stdout, var);
+    }
     assert(varinfo);
     assert(varinfo->reg == R_FP || varinfo->reg == R_SP);
     gen_mips_sw(fp, reg, varinfo->reg, varinfo->offset);
