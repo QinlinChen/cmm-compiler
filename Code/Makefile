@@ -34,7 +34,7 @@ syntax-c: $(YFILE)
 # 定义的一些伪目标
 .PHONY: clean test batchtest
 test:
-	./parser ../Test/temp.cmm ../irsim/temp.ir
+	./parser ../Test/temp.cmm ../../temp.a
 
 batchtest:
 	./parser ../Test/goldbach.cmm ../irsim/goldbach.ir

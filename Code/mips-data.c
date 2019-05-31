@@ -356,7 +356,13 @@ int reginfo_table_find_expellable()
 
     for (int reg = R_T0; reg <= R_T9; ++reg) {
         if (!reginfo_table[reg].is_empty && !reginfo_table[reg].is_locked) {
-            if (reginfo_table[reg].var_loaded.is_temp) {
+            if (is_const_operand(&reginfo_table[reg].var_loaded)) {
+                if (best_score < 3) {
+                    best_reg = reg;
+                    best_score = 3;
+                }
+            }
+            else if (reginfo_table[reg].var_loaded.is_temp) {
                 if (best_score < 2) {
                     best_reg = reg;
                     best_score = 2;
