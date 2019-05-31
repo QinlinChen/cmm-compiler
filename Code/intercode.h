@@ -8,7 +8,7 @@
  * ------------------------------------ */
 
 enum {
-    OPERAND_VAR, OPERAND_ADDR, OPERAND_CONST
+    OPERAND_NONE, OPERAND_VAR, OPERAND_ADDR, OPERAND_CONST
 };
 
 #define LABEL_FALL  -1

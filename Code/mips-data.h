@@ -36,6 +36,7 @@ int collect_varinfo(iclistnode_t *funcdefnode);
 typedef struct reginfo
 {
     int is_empty;
+    int is_locked;
     operand_t var_loaded;
 } reginfo_t;
 
@@ -55,5 +56,15 @@ const char *get_regalias(int reg);
 void init_reginfo_table();
 void reginfo_table_clear();
 void print_reginfo_table();
+
+void reginfo_table_lock(int reg);
+void reginfo_table_unlock(int reg);
+int reginfo_table_find_var(operand_t *var);
+int reginfo_table_find_empty();
+int reginfo_table_find_expellable();
+operand_t reginfo_table_get_var(int reg);
+void reginfo_table_alloc_reg(int reg, operand_t *var);
+operand_t reginfo_table_free_reg(int reg);
+
 
 #endif
