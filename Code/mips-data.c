@@ -181,8 +181,11 @@ int varinfolist_try_add_var(operand_t *var, int size, int offset)
 int collect_varinfo_param(ic_param_t *ic, int n_param, int offset)
 {
     if (n_param <= 4) {
-        reginfo_table_alloc_reg(R_A0 + n_param - 1, &ic->var);
-        return varinfolist_try_add_var(&ic->var, 4, offset);
+        offset = varinfolist_try_add_var(&ic->var, 4, offset);
+        int reg = R_A0 + n_param - 1;
+        reginfo_table_alloc_reg(reg, &ic->var);
+        reginfo_table_set_dirty(reg);
+        return offset;
     }
     else {
         varinfolist_push_back(create_varinfo(&ic->var, R_FP, 8 + 4 * (n_param - 5)));
@@ -307,13 +310,19 @@ void reginfo_table_clear()
 void print_reginfo_table()
 {
     for (int reg = R_A0; reg <= R_T9; ++reg) {
-        printf("%s(%c%c): ", get_regalias(reg),
+        printf("%s(%c%c%c): ", get_regalias(reg),
                reginfo_table[reg].is_empty ? '-' : 'f',
-               reginfo_table[reg].is_locked ? 'l' : '-');
+               reginfo_table[reg].is_locked ? 'l' : '-',
+               reginfo_table[reg].is_dirty ? 'd' : '-');
         if (!reginfo_table[reg].is_empty)
             fprint_operand(stdout, &reginfo_table[reg].var_loaded);
         printf("\n");
     }
+}
+
+int reginfo_table_is_empty(int reg)
+{
+    return reginfo_table[reg].is_empty;
 }
 
 void reginfo_table_lock(int reg)
@@ -327,9 +336,20 @@ void reginfo_table_unlock(int reg)
     reginfo_table[reg].is_locked = 0;
 }
 
-int reginfo_table_is_empty(int reg)
+int reginfo_table_is_dirty(int reg)
 {
-    return reginfo_table[reg].is_empty;
+    return reginfo_table[reg].is_dirty;
+}
+
+void reginfo_table_set_dirty(int reg)
+{
+    if (!reginfo_table[reg].is_empty)
+        reginfo_table[reg].is_dirty = 1;
+}
+
+void reginfo_table_clear_dirty(int reg)
+{
+    reginfo_table[reg].is_dirty = 0;
 }
 
 int reginfo_table_find_var(operand_t *var)
@@ -342,7 +362,7 @@ int reginfo_table_find_var(operand_t *var)
 }
 
 #define REG_BEGIN   R_T0
-#define REG_END     R_T9
+#define REG_END     R_T2
 
 int reginfo_table_find_empty()
 {
@@ -360,6 +380,12 @@ int reginfo_table_find_expellable()
     for (int reg = REG_BEGIN; reg <= REG_END; ++reg) {
         if (!reginfo_table[reg].is_empty && !reginfo_table[reg].is_locked) {
             if (is_const_operand(&reginfo_table[reg].var_loaded)) {
+                if (best_score < 4) {
+                    best_reg = reg;
+                    best_score = 4;
+                }
+            }
+            else if (!reginfo_table[reg].is_dirty) {
                 if (best_score < 3) {
                     best_reg = reg;
                     best_score = 3;
@@ -393,6 +419,7 @@ void reginfo_table_alloc_reg(int reg, operand_t *var)
 {
     reginfo_table[reg].is_empty = 0;
     reginfo_table[reg].is_locked = 0;
+    reginfo_table[reg].is_dirty = 0;
     reginfo_table[reg].var_loaded = *var;
 }
 

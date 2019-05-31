@@ -37,6 +37,7 @@ typedef struct reginfo
 {
     int is_empty;
     int is_locked;
+    int is_dirty;
     operand_t var_loaded;
 } reginfo_t;
 
@@ -57,15 +58,19 @@ void init_reginfo_table();
 void reginfo_table_clear();
 void print_reginfo_table();
 
+int reginfo_table_is_empty(int reg);
 void reginfo_table_lock(int reg);
 void reginfo_table_unlock(int reg);
-int reginfo_table_is_empty(int reg);
+int reginfo_table_is_dirty(int reg);
+void reginfo_table_set_dirty(int reg);
+void reginfo_table_clear_dirty(int reg);
+
 int reginfo_table_find_var(operand_t *var);
 int reginfo_table_find_empty();
 int reginfo_table_find_expellable();
+
 operand_t reginfo_table_get_var(int reg);
 void reginfo_table_alloc_reg(int reg, operand_t *var);
 operand_t reginfo_table_free_reg(int reg);
-
 
 #endif

@@ -65,7 +65,6 @@ Program: ExtDefList {
             if (!has_semantic_error()) {
                 intercodes_translate($$);
                 if (!has_translate_error()) {
-                    fprint_intercodes(stdout);
                     gen_mips(fout);
                 }
             }

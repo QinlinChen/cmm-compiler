@@ -9,8 +9,10 @@
 /* core */
 void gen_mips_framework(FILE *fp);
 iclistnode_t *gen_mips_dispatch(FILE *fp, iclistnode_t *cur);
-iclistnode_t *gen_mips_label(FILE *fp, iclistnode_t *cur);
 iclistnode_t *gen_mips_funcdef(FILE *fp, iclistnode_t *cur);
+iclistnode_t *gen_mips_param(FILE *fp, iclistnode_t *cur);
+iclistnode_t *gen_mips_dec(FILE *fp, iclistnode_t *cur);
+iclistnode_t *gen_mips_return(FILE *fp, iclistnode_t *cur);
 iclistnode_t *gen_mips_assign(FILE *fp, iclistnode_t *cur);
 iclistnode_t *gen_mips_arithbop(FILE *fp, iclistnode_t *cur);
 void gen_mips_arithbop_add(FILE *fp, operand_t *target,
@@ -24,13 +26,11 @@ void gen_mips_arithbop_div(FILE *fp, operand_t *target,
 iclistnode_t *gen_mips_ref(FILE *fp, iclistnode_t *cur);
 iclistnode_t *gen_mips_dref(FILE *fp, iclistnode_t *cur);
 iclistnode_t *gen_mips_drefassign(FILE *fp, iclistnode_t *cur);
+iclistnode_t *gen_mips_label(FILE *fp, iclistnode_t *cur);
 iclistnode_t *gen_mips_goto(FILE *fp, iclistnode_t *cur);
 iclistnode_t *gen_mips_condgoto(FILE *fp, iclistnode_t *cur);
-iclistnode_t *gen_mips_return(FILE *fp, iclistnode_t *cur);
 iclistnode_t *gen_mips_args(FILE *fp, iclistnode_t *cur);
 iclistnode_t *gen_mips_call(FILE *fp, iclistnode_t *cur);
-iclistnode_t *gen_mips_dec(FILE *fp, iclistnode_t *cur);
-iclistnode_t *gen_mips_param(FILE *fp, iclistnode_t *cur);
 iclistnode_t *gen_mips_read(FILE *fp, iclistnode_t *cur);
 iclistnode_t *gen_mips_write(FILE *fp, iclistnode_t *cur);
 
@@ -110,34 +110,24 @@ void gen_mips_framework(FILE *fp)
 iclistnode_t *gen_mips_dispatch(FILE *fp, iclistnode_t *cur)
 {
     switch (cur->ic->kind) {
-    case IC_LABEL: return gen_mips_label(fp, cur);
     case IC_FUNCDEF: return gen_mips_funcdef(fp, cur);
+    case IC_PARAM: return gen_mips_param(fp, cur);
+    case IC_DEC: return gen_mips_dec(fp, cur);
+    case IC_RETURN: return gen_mips_return(fp, cur);
     case IC_ASSIGN: return gen_mips_assign(fp, cur);
     case IC_ARITHBOP: return gen_mips_arithbop(fp, cur);
     case IC_REF: return gen_mips_ref(fp, cur);
     case IC_DREF: return gen_mips_dref(fp, cur);
     case IC_DREFASSIGN: return gen_mips_drefassign(fp, cur);
+    case IC_LABEL: return gen_mips_label(fp, cur);
     case IC_GOTO: return gen_mips_goto(fp, cur);
     case IC_CONDGOTO: return gen_mips_condgoto(fp, cur);
-    case IC_RETURN: return gen_mips_return(fp, cur);
-    case IC_DEC: return gen_mips_dec(fp, cur);
     case IC_ARG: return gen_mips_args(fp, cur);
     case IC_CALL: return gen_mips_call(fp, cur);
-    case IC_PARAM: return gen_mips_param(fp, cur);
     case IC_READ: return gen_mips_read(fp, cur);
     case IC_WRITE: return gen_mips_write(fp, cur);
     default: assert(0); break;  /* Should not reach here */
     }
-    return cur->next;
-}
-
-iclistnode_t *gen_mips_label(FILE *fp, iclistnode_t *cur)
-{
-    ic_label_t *ic = (ic_label_t *)cur->ic;
-
-    gen_mips_writeback_vars(fp);    /* Write back at the end of the basic block. */
-    gen_mips_tag(fp, "L%d", ic->labelid);
-
     return cur->next;
 }
 
@@ -155,7 +145,35 @@ iclistnode_t *gen_mips_funcdef(FILE *fp, iclistnode_t *cur)
     int offset = collect_varinfo(cur);
     gen_mips_add_sp(fp, offset);
 
-    print_varinfolist();
+    return cur->next;
+}
+
+iclistnode_t *gen_mips_dec(FILE *fp, iclistnode_t *cur)
+{
+    return cur->next; /* Do nothing. */
+}
+
+iclistnode_t *gen_mips_param(FILE *fp, iclistnode_t *cur)
+{
+    return cur->next; /* Do nothing. */
+}
+
+iclistnode_t *gen_mips_return(FILE *fp, iclistnode_t *cur)
+{
+    ic_return_t *ic = (ic_return_t *)cur->ic;
+    operand_t *ret = &ic->ret;
+
+    if (is_const_operand(ret)) {
+        gen_mips_li(fp, R_V0, ret->val);
+    }
+    else {
+        int reg = gen_mips_get_reg(fp, ret, 0);
+        gen_mips_move(fp, R_V0, reg);
+    }
+
+    gen_mips_epilogue(fp);
+    gen_mips_jr(fp, R_RA);
+
     return cur->next;
 }
 
@@ -167,6 +185,7 @@ iclistnode_t *gen_mips_assign(FILE *fp, iclistnode_t *cur)
     if (is_const_operand(&ic->rhs)) {
         int reg = gen_mips_get_reg(fp, &ic->lhs, 1);
         gen_mips_li(fp, reg, ic->rhs.val);
+        reginfo_table_set_dirty(reg);
     }
     else {
         int rs = gen_mips_get_reg(fp, &ic->rhs, 0);
@@ -174,6 +193,7 @@ iclistnode_t *gen_mips_assign(FILE *fp, iclistnode_t *cur)
         int rt = gen_mips_get_reg(fp, &ic->lhs, 1);
         reginfo_table_unlock(rs);
         gen_mips_move(fp, rt, rs);
+        reginfo_table_set_dirty(rt);
     }
 
     return cur->next;
@@ -203,10 +223,10 @@ void gen_mips_arithbop_add(FILE *fp, operand_t *target,
     if (is_const_operand(lhs) && is_const_operand(rhs)) {
         int reg = gen_mips_get_reg(fp, target, 1);
         gen_mips_li(fp, reg, lhs->val + rhs->val);
+        reginfo_table_set_dirty(reg);
     }
     else if (is_const_operand(lhs) || is_const_operand(rhs)) {
-        if (is_const_operand(lhs))
-        {
+        if (is_const_operand(lhs)) {
             operand_t *temp = rhs;
             rhs = lhs;
             lhs = temp;
@@ -218,6 +238,7 @@ void gen_mips_arithbop_add(FILE *fp, operand_t *target,
         int rt = gen_mips_get_reg(fp, target, 1);
         reginfo_table_unlock(rs);
         gen_mips_addi(fp, rt, rs, rhs->val);
+        reginfo_table_set_dirty(rt);
     }
     else {
         int rs = gen_mips_get_reg(fp, lhs, 0);
@@ -228,6 +249,7 @@ void gen_mips_arithbop_add(FILE *fp, operand_t *target,
         reginfo_table_unlock(rs);
         reginfo_table_unlock(rt);
         gen_mips_add(fp, rd, rs, rt);
+        reginfo_table_set_dirty(rd);
     }
 }
 
@@ -237,6 +259,7 @@ void gen_mips_arithbop_sub(FILE *fp, operand_t *target,
     if (is_const_operand(lhs) && is_const_operand(rhs)) {
         int reg = gen_mips_get_reg(fp, target, 1);
         gen_mips_li(fp, reg, lhs->val - rhs->val);
+        reginfo_table_set_dirty(reg);
     }
     else if (is_const_operand(rhs)) {
         int rs = gen_mips_get_reg(fp, lhs, 0);
@@ -244,6 +267,7 @@ void gen_mips_arithbop_sub(FILE *fp, operand_t *target,
         int rt = gen_mips_get_reg(fp, target, 1);
         reginfo_table_unlock(rs);
         gen_mips_addi(fp, rt, rs, -rhs->val);
+        reginfo_table_set_dirty(rt);
     }
     else {
         int rs = gen_mips_get_reg(fp, lhs, 0);
@@ -254,6 +278,7 @@ void gen_mips_arithbop_sub(FILE *fp, operand_t *target,
         reginfo_table_unlock(rs);
         reginfo_table_unlock(rt);
         gen_mips_sub(fp, rd, rs, rt);
+        reginfo_table_set_dirty(rd);
     }
 }
 
@@ -263,6 +288,7 @@ void gen_mips_arithbop_mul(FILE *fp, operand_t *target,
     if (is_const_operand(lhs) && is_const_operand(rhs)) {
         int reg = gen_mips_get_reg(fp, target, 1);
         gen_mips_li(fp, reg, lhs->val * rhs->val);
+        reginfo_table_set_dirty(reg);
     }
     else {
         int rs = gen_mips_get_reg(fp, lhs, 0);
@@ -273,6 +299,7 @@ void gen_mips_arithbop_mul(FILE *fp, operand_t *target,
         reginfo_table_unlock(rs);
         reginfo_table_unlock(rt);
         gen_mips_mul(fp, rd, rs, rt);
+        reginfo_table_set_dirty(rd);
     }
 }
 
@@ -282,6 +309,7 @@ void gen_mips_arithbop_div(FILE *fp, operand_t *target,
     if (is_const_operand(lhs) && is_const_operand(rhs)) {
         int reg = gen_mips_get_reg(fp, target, 1);
         gen_mips_li(fp, reg, lhs->val / rhs->val);
+        reginfo_table_set_dirty(reg);
     }
     else {
         int rs = gen_mips_get_reg(fp, lhs, 0);
@@ -291,6 +319,7 @@ void gen_mips_arithbop_div(FILE *fp, operand_t *target,
         gen_mips_div(fp, rs, rt);
         int rd = gen_mips_get_reg(fp, target, 1);
         gen_mips_mflo(fp, rd);
+        reginfo_table_set_dirty(rd);
     }
 }
 
@@ -298,8 +327,10 @@ iclistnode_t *gen_mips_ref(FILE *fp, iclistnode_t *cur)
 {
     ic_ref_t *ic = (ic_ref_t *)cur->ic;
     varinfo_t *varinfo = varinfolist_find(&ic->rhs);
+    assert(varinfo);
     int reg = gen_mips_get_reg(fp, &ic->lhs, 1);
     gen_mips_addi(fp, reg, varinfo->reg, varinfo->offset);
+    reginfo_table_set_dirty(reg);
 
     return cur->next;
 }
@@ -312,6 +343,7 @@ iclistnode_t *gen_mips_dref(FILE *fp, iclistnode_t *cur)
     int rt = gen_mips_get_reg(fp, &ic->lhs, 1);
     reginfo_table_unlock(rs);
     gen_mips_lw(fp, rt, rs, 0);
+    reginfo_table_set_dirty(rt);
 
     return cur->next;
 }
@@ -324,6 +356,16 @@ iclistnode_t *gen_mips_drefassign(FILE *fp, iclistnode_t *cur)
     int rt = gen_mips_get_reg(fp, &ic->lhs, 0);
     reginfo_table_unlock(rs);
     gen_mips_sw(fp, rs, rt, 0);
+
+    return cur->next;
+}
+
+iclistnode_t *gen_mips_label(FILE *fp, iclistnode_t *cur)
+{
+    ic_label_t *ic = (ic_label_t *)cur->ic;
+
+    gen_mips_writeback_vars(fp);    /* Write back at the end of the basic block. */
+    gen_mips_tag(fp, "L%d", ic->labelid);
 
     return cur->next;
 }
@@ -363,26 +405,7 @@ iclistnode_t *gen_mips_condgoto(FILE *fp, iclistnode_t *cur)
         gen_mips_b_tag(fp, "ble", rs, rt, "L%d", ic->labelid); break;
     default:
         assert(0); break; /* Should not reach here. */
-    } 
-    return cur->next;
-}
-
-iclistnode_t *gen_mips_return(FILE *fp, iclistnode_t *cur)
-{
-    ic_return_t *ic = (ic_return_t *)cur->ic;
-    operand_t *ret = &ic->ret;
-
-    if (is_const_operand(ret)) {
-        gen_mips_li(fp, R_V0, ret->val);
     }
-    else {
-        int reg = gen_mips_get_reg(fp, &ic->ret, 0);
-        gen_mips_move(fp, R_V0, reg);
-    }
-
-    gen_mips_epilogue(fp);
-    gen_mips_jr(fp, R_RA);
-    
     return cur->next;
 }
 
@@ -394,14 +417,13 @@ iclistnode_t *gen_mips_args(FILE *fp, iclistnode_t *cur)
     for (end = cur->next; end != NULL; end = end->next)
         if (end->ic->kind != IC_ARG)
             break;
-    
+
     int i = 1;
     for (iclistnode_t *iter = end->prev; iter != cur->prev; iter = iter->prev) {
         ic_arg_t *ic = (ic_arg_t *)iter->ic;
 
         if (i <= 4) {
-            int rd = R_A0 + i - 1;
-            int rs;
+            int rd = R_A0 + i - 1, rs = R_NONE;
             assert(reginfo_table_is_empty(rd));
             if (is_const_operand(&ic->arg)) {
                 gen_mips_li(fp, rd, ic->arg.val);
@@ -435,18 +457,9 @@ iclistnode_t *gen_mips_call(FILE *fp, iclistnode_t *cur)
 
     int reg = gen_mips_get_reg(fp, &ic->ret, 1);
     gen_mips_move(fp, reg, R_V0);
+    reginfo_table_set_dirty(reg);
 
     return cur->next;
-}
-
-iclistnode_t *gen_mips_dec(FILE *fp, iclistnode_t *cur)
-{
-    return cur->next; /* Do nothing. */
-}
-
-iclistnode_t *gen_mips_param(FILE *fp, iclistnode_t *cur)
-{
-    return cur->next; /* Do nothing. */
 }
 
 iclistnode_t *gen_mips_read(FILE *fp, iclistnode_t *cur)
@@ -461,6 +474,7 @@ iclistnode_t *gen_mips_read(FILE *fp, iclistnode_t *cur)
 
     int reg = gen_mips_get_reg(fp, &ic->var, 1);
     gen_mips_move(fp, reg, R_V0);
+    reginfo_table_set_dirty(reg);
 
     return cur->next;
 }
@@ -468,7 +482,7 @@ iclistnode_t *gen_mips_read(FILE *fp, iclistnode_t *cur)
 iclistnode_t *gen_mips_write(FILE *fp, iclistnode_t *cur)
 {
     ic_write_t *ic = (ic_write_t *)cur->ic;
-    
+
     gen_mips_writeback(fp, R_A0);
     int reg = gen_mips_get_reg(fp, &ic->var, 0);
     gen_mips_move(fp, R_A0, reg);
@@ -679,10 +693,12 @@ void gen_mips_after_call(FILE *fp)
 void gen_mips_writeback(FILE *fp, int reg)
 {
     if (!reginfo_table_is_empty(reg)) {
+        int is_dirty = reginfo_table_is_dirty(reg);
         operand_t var = reginfo_table_free_reg(reg);
-        gen_mips_store_var(fp, reg, &var);
+        if (is_dirty)
+            gen_mips_store_var(fp, reg, &var);
     }
-    assert(reginfo_table_is_empty(reg));
+    assert(reginfo_table_is_empty(reg) && !reginfo_table_is_dirty(reg));
 }
 
 void gen_mips_writeback_args(FILE *fp)
