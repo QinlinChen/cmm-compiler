@@ -622,7 +622,7 @@ type_t *typecheck_func_call(treenode_t *id, treenode_t *args, int *is_lval)
     init_typelist(&arglist);
     if (args && analyse_args(args, &arglist) != 0)
         return funcinfo->ret_type;  /* Try repairing. */
-    
+
     if (!typelist_is_equal(&funcinfo->types, &arglist)) {
         /* sematic_error function is not strong enough to print
          * all error infomation as we want. So, here we work around it. */

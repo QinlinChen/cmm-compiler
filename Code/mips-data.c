@@ -172,7 +172,7 @@ int varinfolist_try_add_var(operand_t *var, int size, int offset)
 
     if (varinfolist_find(var))
         return offset;
-    
+
     offset -= size;
     varinfolist_push_back(create_varinfo(var, R_FP, offset));
     return offset;
@@ -280,7 +280,7 @@ const char *get_regalias(int reg)
         "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7",
         "s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7",
         "t8", "t9", "k0", "k1",
-        "gp", "sp", "s8", "ra"
+        "gp", "sp", "fp", "ra"
     };
     if (reg == R_NONE)
         return "none";
@@ -362,7 +362,7 @@ int reginfo_table_find_var(operand_t *var)
 }
 
 #define REG_BEGIN   R_T0
-#define REG_END     R_T2
+#define REG_END     R_T9
 
 int reginfo_table_find_empty()
 {

@@ -78,16 +78,15 @@ int is_const_operand(operand_t *op)
 
 int operand_is_equal(operand_t *lhs, operand_t *rhs)
 {
-    if (lhs->kind != rhs->kind)
+    if (lhs->kind == OPERAND_VAR || lhs->kind == OPERAND_ADDR) {
+        if (rhs->kind == OPERAND_VAR || rhs->kind == OPERAND_ADDR)
+            return lhs->varid == rhs->varid;
         return 0;
-    switch (lhs->kind) {
-    case OPERAND_ADDR: /* fall through */
-    case OPERAND_VAR:
-        return lhs->varid == rhs->varid;
-    case OPERAND_CONST:
-        return lhs->val == rhs->val;
-    default:
-        assert(0); break;
+    }
+    if (lhs->kind == OPERAND_CONST) {
+        if (rhs->kind == OPERAND_CONST)
+            return lhs->val == rhs->val;
+        return 0;
     }
     return 0;
 }
