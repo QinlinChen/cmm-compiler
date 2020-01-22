@@ -1,5 +1,5 @@
-# CMM-Compiler
-A compiler for the CMM(C-Minus-Minus) language which is the subset of the C programming language.
+# cmm-compiler
+It is a compiler for the CMM(C-Minus-Minus) language, a subset of the C programming language. The target platform is MIPS32.
 
 ## Dependency
 
